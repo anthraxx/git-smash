@@ -14,17 +14,9 @@ fn run(args: Args) -> Result<()> {
     let mut cmd_sk = spawn_menu()?;
 
     let git_bin = "git";
-    let files_args = vec!["diff", "--color=never", "--name-only", "--cached"];
-    let mut cmd_files = Command::new(&git_bin)
-        .stdout(Stdio::piped())
-        .args(&files_args)
-        .spawn()?;
-    let stdout = cmd_files.stdout.as_mut().unwrap();
-    let stdout_reader = BufReader::new(stdout);
 
-    'files: for filename in stdout_reader.lines() {
-        let filename = filename?;
-        let file_revs_args = vec!["log", "--format=%H %s", "HEAD", "--", filename.as_ref()];
+    'files: for filename in get_staged_files()? {
+        let file_revs_args = vec!["log", "--format=%H %s", "HEAD", "--", &filename];
         let mut cmd_file_revs = Command::new(&git_bin)
             .args(&file_revs_args)
             .stdout(Stdio::piped())
@@ -58,7 +50,6 @@ fn run(args: Args) -> Result<()> {
         cmd_file_revs.kill()?;
     }
 
-    cmd_files.kill()?;
     let output = cmd_sk.wait_with_output()?;
     let target = select_target(output.stdout.as_ref());
     if !target.is_empty() {
@@ -66,6 +57,18 @@ fn run(args: Args) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn get_staged_files() -> Result<Vec<String>> {
+    let git_bin = "git";
+    let files_args = vec!["diff", "--color=never", "--name-only", "--cached"];
+    let mut cmd_files = Command::new(&git_bin)
+        .stdout(Stdio::piped())
+        .args(&files_args)
+        .spawn()?;
+    let stdout = cmd_files.stdout.as_mut().unwrap();
+    let stdout_reader = BufReader::new(stdout);
+    Ok(stdout_reader.lines().filter_map(|e| e.ok()).collect())
 }
 
 fn spawn_menu() -> Result<Child> {
