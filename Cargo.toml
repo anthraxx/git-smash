@@ -1,0 +1,18 @@
+[package]
+name = "git-smash"
+version = "0.0.1"
+authors = ["anthraxx <levente@leventepolyak.net>"]
+edition = "2018"
+license = "MIT"
+repository = "https://github.com/anthraxx/git-smash"
+homepage = "https://github.com/anthraxx/git-smash"
+categories = ["command-line-utilities"]
+keywords = ["git", "workflow"]
+
+[dependencies]
+anyhow = "^1.0"
+regex = "^1.4"
+
+[profile.release]
+lto = true
+codegen-units = 1
