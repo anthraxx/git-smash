@@ -14,4 +14,7 @@ pub struct Args {
     /// Git log format to pretty print the targets
     #[structopt(long)]
     pub format: Option<String>,
+    /// Number of commits per file
+    #[structopt(long, short = "n", default_value = "4")]
+    pub commits: u32,
 }

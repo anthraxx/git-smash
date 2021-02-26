@@ -25,7 +25,13 @@ fn run(args: Args) -> Result<()> {
 
     let git_bin = "git";
 
-    'files: for filename in get_staged_files()? {
+    let staged_files = git_staged_files()?;
+    if staged_files.is_empty() {
+        eprintln!("Changes not staged for commit\nUse git add -p to stage changed files");
+        return Ok(());
+    }
+
+    'files: for filename in staged_files {
         let file_revs_args = vec!["log", "--format=%H %s", "HEAD", "--", &filename];
         let mut cmd_file_revs = Command::new(&git_bin)
             .args(&file_revs_args)
@@ -44,8 +50,6 @@ fn run(args: Args) -> Result<()> {
             }
             let line = line.splitn(2, " ").next().unwrap();
 
-            count += 1;
-
             let target = format_target(&line, &format)?;
 
             if args.list {
@@ -60,7 +64,8 @@ fn run(args: Args) -> Result<()> {
                 }
             }
 
-            if count > 4 {
+            count += 1;
+            if count >= args.commits {
                 break;
             }
         }
@@ -80,7 +85,7 @@ fn run(args: Args) -> Result<()> {
     Ok(())
 }
 
-fn get_staged_files() -> Result<Vec<String>> {
+fn git_staged_files() -> Result<Vec<String>> {
     let git_bin = "git";
     let files_args = vec!["diff", "--color=never", "--name-only", "--cached"];
     let mut cmd_files = Command::new(&git_bin)
