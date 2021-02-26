@@ -28,4 +28,7 @@ pub struct Args {
     /// Do not rebase the fixup commit into the target
     #[structopt(long, group = "autorebase")]
     pub no_rebase: bool,
+    /// Let the user edit the list of commits before rebasing
+    #[structopt(long)]
+    pub interactive: bool,
 }

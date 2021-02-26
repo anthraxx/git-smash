@@ -107,15 +107,15 @@ fn run(args: Args) -> Result<()> {
 
         git_commit_fixup(&target)?;
 
-        if ! args.no_rebase {
-            git_rebase(&target)?;
+        if !args.no_rebase {
+            git_rebase(&target, args.interactive)?;
         }
     }
 
     Ok(())
 }
 
-fn git_rebase(rev: &str) -> Result<()> {
+fn git_rebase(rev: &str, interactive: bool) -> Result<()> {
     let root = git_rev_root()?;
     let rev = match root.starts_with(rev) {
         true => "--root".to_string(),
@@ -130,7 +130,11 @@ fn git_rebase(rev: &str) -> Result<()> {
         "--autostash",
         &rev,
     ];
-    let mut cmd = Command::new(&git_bin).args(&args).spawn()?;
+    let mut cmd = Command::new(&git_bin);
+    if ! interactive {
+        cmd.env("GIT_EDITOR", "true");
+    }
+    let mut cmd = cmd.args(&args).spawn()?;
     let status = cmd.wait()?;
 
     if !status.success() {
