@@ -22,4 +22,10 @@ pub struct Args {
     /// Limit the listed revs to local commits
     #[structopt(long, short = "l", group = "range")]
     pub local: bool,
+    /// Rebase the fixup commit into the target
+    #[structopt(long, group = "autorebase")]
+    pub rebase: bool,
+    /// Do not rebase the fixup commit into the target
+    #[structopt(long, group = "autorebase")]
+    pub no_rebase: bool,
 }

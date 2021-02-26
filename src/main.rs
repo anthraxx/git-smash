@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::process::{exit, Child, Command, Stdio};
 use std::{env, io, str};
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use regex::Regex;
 
 fn run(args: Args) -> Result<()> {
@@ -106,9 +106,55 @@ fn run(args: Args) -> Result<()> {
         }
 
         git_commit_fixup(&target)?;
+
+        if ! args.no_rebase {
+            git_rebase(&target)?;
+        }
     }
 
     Ok(())
+}
+
+fn git_rebase(rev: &str) -> Result<()> {
+    let root = git_rev_root()?;
+    let rev = match root.starts_with(rev) {
+        true => "--root".to_string(),
+        false => format!("{}^", rev),
+    };
+
+    let git_bin = "git";
+    let args = vec![
+        "rebase",
+        "--interactive",
+        "--autosquash",
+        "--autostash",
+        &rev,
+    ];
+    let mut cmd = Command::new(&git_bin).args(&args).spawn()?;
+    let status = cmd.wait()?;
+
+    if !status.success() {
+        exit(status.code().unwrap_or_else(|| 1));
+    }
+
+    Ok(())
+}
+
+fn git_rev_root() -> Result<String> {
+    let git_bin = "git";
+    let args = vec!["rev-list", "--max-parents=0", "HEAD"];
+    let cmd = Command::new(&git_bin)
+        .stdout(Stdio::piped())
+        .args(&args)
+        .spawn()?;
+    let output = cmd.wait_with_output()?;
+    if !output.status.success() {
+        bail!("failed to get git rev root");
+    }
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .into_owned()
+        .trim_end()
+        .to_owned())
 }
 
 fn git_rev_range(local_only: bool) -> Result<Option<String>> {
