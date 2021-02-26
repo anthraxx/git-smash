@@ -150,11 +150,10 @@ fn format_target(commit: &str, format: &str) -> Result<Vec<u8>> {
     let git_bin = "git";
     let format = format!("--format={}", format);
     let args = vec!["--no-pager", "log", "-1", &format, &commit];
-    let mut cmd = Command::new(&git_bin)
+    let cmd = Command::new(&git_bin)
         .stdout(Stdio::piped())
         .args(&args)
         .spawn()?;
-    cmd.wait()?;
     let output = cmd.wait_with_output()?;
     Ok(output.stdout)
 }
