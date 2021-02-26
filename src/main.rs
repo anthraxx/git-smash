@@ -13,6 +13,11 @@ use regex::Regex;
 fn run(args: Args) -> Result<()> {
     let re_fixup = Regex::new(r"^[a-f0-9]+ (fixup|squash)! ")?;
 
+    let format = match args.format {
+        None => "%C(yellow)%h%C(reset) %s %C(cyan)<%an>%C(reset) %C(green)(%cr)%C(reset)%C(auto)%d%C(reset)",
+        Some(ref format) => format,
+    };
+
     let mut cmd_sk = match args.select {
         true => Option::Some(spawn_menu()?),
         _ => Option::None,
@@ -41,7 +46,7 @@ fn run(args: Args) -> Result<()> {
 
             count += 1;
 
-            let target = format_target(&line)?;
+            let target = format_target(&line, &format)?;
 
             if args.list {
                 print!("{}", String::from_utf8_lossy(&target));
@@ -97,8 +102,7 @@ fn spawn_menu() -> Result<Child> {
         .spawn()?)
 }
 
-fn format_target(commit: &str) -> Result<Vec<u8>> {
-    let format = "%C(yellow)%h%C(reset) %s %C(cyan)<%an>%C(reset) %C(green)(%cr)%C(reset)%C(auto)%d%C(reset)";
+fn format_target(commit: &str, format: &str) -> Result<Vec<u8>> {
     let git_bin = "git";
     let format = format!("--format={}", format);
     let args = vec!["--no-pager", "log", "-1", &format, &commit];
