@@ -3,7 +3,7 @@ mod args;
 
 use structopt::StructOpt;
 
-use std::{str, env};
+use std::{str, env, io};
 use std::process::{Command, Stdio, exit, Child};
 use std::io::{BufReader, BufRead, Write};
 use std::path::PathBuf;
@@ -24,7 +24,7 @@ fn run(args: Args) -> Result<()> {
 
     let staged_files = git_staged_files()?;
     if staged_files.is_empty() {
-        eprintln!("Changes not staged for commit\nUse git add -p to stage changed files");
+        if writeln!(io::stderr(), "Changes not staged for commit\nUse git add -p to stage changed files").is_err() {}
         exit(1);
     }
 
@@ -57,7 +57,9 @@ fn run(args: Args) -> Result<()> {
             let target = format_target(&line, &format)?;
 
             if args.list {
-                print!("{}", String::from_utf8_lossy(&target));
+                if write!(io::stdout(), "{}", String::from_utf8_lossy(&target)).is_err() {
+                    return Ok(());
+                }
             } else {
                 if let Some(ref mut cmd_sk) = cmd_sk {
                     if let Some(ref mut stdin) = cmd_sk.stdin {
@@ -85,12 +87,12 @@ fn run(args: Args) -> Result<()> {
         }
 
         if ! is_valid_git_rev(&target)? {
-            eprintln!("Selected commit '{}' not found\nPossibly --format or smash.format doesn't return a hash", target);
+            if writeln!(io::stderr(), "Selected commit '{}' not found\nPossibly --format or smash.format doesn't return a hash", target).is_err() {}
             exit(1);
         }
 
         if args.select {
-            println!("{}", target);
+            if writeln!(io::stdout(), "{}", &target).is_err() {}
             return Ok(());
         }
 
@@ -134,7 +136,9 @@ fn git_commit_fixup(target: &str) -> Result<()> {
     let stdout_reader = BufReader::new(stdout);
     let stdout_lines = stdout_reader.lines();
     for line in stdout_lines {
-        println!("{}", line?);
+        if writeln!(io::stdout(), "{}", line?).is_err() {
+            break;
+        }
     }
     Ok(())
 }
