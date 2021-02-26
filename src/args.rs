@@ -1,6 +1,5 @@
-use structopt::clap::{AppSettings};
+use structopt::clap::AppSettings;
 use structopt::StructOpt;
-
 
 #[derive(Debug, StructOpt)]
 #[structopt(about="Smash staged changes into previous commits.", global_settings = &[AppSettings::ColoredHelp, AppSettings::DeriveDisplayOrder])]

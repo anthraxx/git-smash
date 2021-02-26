@@ -3,12 +3,12 @@ mod args;
 
 use structopt::StructOpt;
 
-use std::{str, env, io};
-use std::process::{Command, Stdio, exit, Child};
-use std::io::{BufReader, BufRead, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
+use std::process::{exit, Child, Command, Stdio};
+use std::{env, io, str};
 
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use regex::Regex;
 
 fn run(args: Args) -> Result<()> {
@@ -24,7 +24,12 @@ fn run(args: Args) -> Result<()> {
 
     let staged_files = git_staged_files()?;
     if staged_files.is_empty() {
-        if writeln!(io::stderr(), "Changes not staged for commit\nUse git add -p to stage changed files").is_err() {}
+        if writeln!(
+            io::stderr(),
+            "Changes not staged for commit\nUse git add -p to stage changed files"
+        )
+        .is_err()
+        {}
         exit(1);
     }
 
@@ -90,7 +95,7 @@ fn run(args: Args) -> Result<()> {
             return Ok(());
         }
 
-        if ! is_valid_git_rev(&target)? {
+        if !is_valid_git_rev(&target)? {
             if writeln!(io::stderr(), "Selected commit '{}' not found\nPossibly --format or smash.format doesn't return a hash", target).is_err() {}
             exit(1);
         }
@@ -116,7 +121,7 @@ fn git_rev_range(local_only: bool) -> Result<Option<String>> {
         if upstream == head {
             return Ok(None);
         }
-        range="@{upstream}..HEAD";
+        range = "@{upstream}..HEAD";
     }
 
     Ok(Some(range.to_string()))
@@ -135,10 +140,15 @@ fn git_rev_parse_stderr<T: Into<Stdio>>(rev: &str, stderr: T) -> Result<Option<S
         .args(&args)
         .spawn()?;
     let output = cmd.wait_with_output()?;
-    if ! output.status.success() {
+    if !output.status.success() {
         return Ok(None);
     }
-    Ok(Some(String::from_utf8_lossy(&output.stdout).into_owned().trim_end().to_owned()))
+    Ok(Some(
+        String::from_utf8_lossy(&output.stdout)
+            .into_owned()
+            .trim_end()
+            .to_owned(),
+    ))
 }
 
 fn git_toplevel() -> Result<Option<PathBuf>> {
@@ -189,7 +199,11 @@ fn git_staged_files() -> Result<Vec<String>> {
 
 fn spawn_menu() -> Result<Child> {
     let sk_bin = "sk";
-    let sk_args = vec!["--ansi", "--preview", "git show --stat --patch --color {+1}"];
+    let sk_args = vec![
+        "--ansi",
+        "--preview",
+        "git show --stat --patch --color {+1}",
+    ];
     Ok(Command::new(&sk_bin)
         .args(&sk_args)
         .stdin(Stdio::piped())
