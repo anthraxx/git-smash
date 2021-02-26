@@ -18,18 +18,18 @@ fn run(args: Args) -> Result<()> {
         Some(ref format) => format,
     };
 
-    let mut cmd_sk = match args.select {
-        true => Option::Some(spawn_menu()?),
-        _ => Option::None,
-    };
-
-    let git_bin = "git";
-
     let staged_files = git_staged_files()?;
     if staged_files.is_empty() {
         eprintln!("Changes not staged for commit\nUse git add -p to stage changed files");
         return Ok(());
     }
+
+    let mut cmd_sk = match args.list {
+        false => Option::Some(spawn_menu()?),
+        true => Option::None,
+    };
+
+    let git_bin = "git";
 
     'files: for filename in staged_files {
         let file_revs_args = vec!["log", "--format=%H %s", "HEAD", "--", &filename];
