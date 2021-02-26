@@ -1,17 +1,22 @@
+use args::*;
 mod args;
-use crate::args::Args;
+
+use structopt::StructOpt;
 
 use std::str;
 use std::process::{Command, Stdio, exit, Child};
 use std::io::{BufReader, BufRead, Write};
 
-use anyhow::Result;
+use anyhow::{Result};
 use regex::Regex;
 
 fn run(args: Args) -> Result<()> {
     let re_fixup = Regex::new(r"^[a-f0-9]+ (fixup|squash)! ")?;
 
-    let mut cmd_sk = spawn_menu()?;
+    let mut cmd_sk = match args.select {
+        true => Option::Some(spawn_menu()?),
+        _ => Option::None,
+    };
 
     let git_bin = "git";
 
@@ -36,10 +41,17 @@ fn run(args: Args) -> Result<()> {
 
             count += 1;
 
-            if let Some(ref mut stdin) = cmd_sk.stdin {
-                let target = format_target(&line)?;
-                if stdin.write(&target).is_err() {
-                    break 'files;
+            let target = format_target(&line)?;
+
+            if args.list {
+                print!("{}", String::from_utf8_lossy(&target));
+            } else {
+                if let Some(ref mut cmd_sk) = cmd_sk {
+                    if let Some(ref mut stdin) = cmd_sk.stdin {
+                        if stdin.write(&target).is_err() {
+                            break 'files;
+                        }
+                    }
                 }
             }
 
@@ -50,10 +62,14 @@ fn run(args: Args) -> Result<()> {
         cmd_file_revs.kill()?;
     }
 
-    let output = cmd_sk.wait_with_output()?;
-    let target = select_target(output.stdout.as_ref());
-    if !target.is_empty() {
-        println!("{}", target);
+    if let Some(cmd_sk) = cmd_sk {
+        let output = cmd_sk.wait_with_output()?;
+        let target = select_target(output.stdout.as_ref());
+        if !target.is_empty() {
+            if args.select {
+                println!("{}", target);
+            }
+        }
     }
 
     Ok(())
@@ -101,7 +117,8 @@ fn select_target(line: &[u8]) -> String {
 }
 
 fn main() {
-    let args = Args {};
+    let args = Args::from_args();
+
     if let Err(err) = run(args) {
         eprintln!("Error: {}", err);
         for cause in err.chain().skip(1) {

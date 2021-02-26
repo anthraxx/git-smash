@@ -12,6 +12,9 @@ keywords = ["git", "workflow"]
 [dependencies]
 anyhow = "^1.0"
 regex = "^1.4"
+structopt = "0.3"
+strum = "0.20"
+strum_macros = "0.20"
 
 [profile.release]
 lto = true
