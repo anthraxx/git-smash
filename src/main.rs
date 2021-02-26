@@ -78,10 +78,30 @@ fn run(args: Args) -> Result<()> {
         if !target.is_empty() {
             if args.select {
                 println!("{}", target);
+                return Ok(());
             }
+
+            git_commit_fixup(&target)?;
         }
     }
 
+    Ok(())
+}
+
+fn git_commit_fixup(target: &str) -> Result<()> {
+    let git_bin = "git";
+    let files_args = vec!["commit", "--no-edit", "--fixup", &target];
+    let mut cmd_commit = Command::new(&git_bin)
+        .stdout(Stdio::piped())
+        .args(&files_args)
+        .spawn()?;
+
+    let stdout = cmd_commit.stdout.as_mut().unwrap();
+    let stdout_reader = BufReader::new(stdout);
+    let stdout_lines = stdout_reader.lines();
+    for line in stdout_lines {
+        println!("{}", line?);
+    }
     Ok(())
 }
 
