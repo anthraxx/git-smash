@@ -3,9 +3,10 @@ mod args;
 
 use structopt::StructOpt;
 
-use std::str;
+use std::{str, env};
 use std::process::{Command, Stdio, exit, Child};
 use std::io::{BufReader, BufRead, Write};
+use std::path::PathBuf;
 
 use anyhow::{Result};
 use regex::Regex;
@@ -17,6 +18,9 @@ fn run(args: Args) -> Result<()> {
         None => "%C(yellow)%h%C(reset) %s %C(cyan)<%an>%C(reset) %C(green)(%cr)%C(reset)%C(auto)%d%C(reset)",
         Some(ref format) => format,
     };
+
+    let toplevel = git_toplevel()?;
+    env::set_current_dir(&toplevel)?;
 
     let staged_files = git_staged_files()?;
     if staged_files.is_empty() {
@@ -94,6 +98,17 @@ fn run(args: Args) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn git_toplevel() -> Result<PathBuf> {
+    let git_bin = "git";
+    let args = vec!["rev-parse", "--show-toplevel"];
+    let cmd = Command::new(&git_bin)
+        .stdout(Stdio::piped())
+        .args(&args)
+        .spawn()?;
+    let output = cmd.wait_with_output()?;
+    Ok(PathBuf::from(String::from_utf8_lossy(&output.stdout).into_owned().trim_end()))
 }
 
 fn is_valid_git_rev(rev: &str) -> Result<bool> {
