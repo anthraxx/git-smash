@@ -21,7 +21,7 @@ fn run(args: Args) -> Result<()> {
     let staged_files = git_staged_files()?;
     if staged_files.is_empty() {
         eprintln!("Changes not staged for commit\nUse git add -p to stage changed files");
-        return Ok(());
+        exit(1);
     }
 
     let mut cmd_sk = match args.list {
@@ -75,17 +75,36 @@ fn run(args: Args) -> Result<()> {
     if let Some(cmd_sk) = cmd_sk {
         let output = cmd_sk.wait_with_output()?;
         let target = select_target(output.stdout.as_ref());
-        if !target.is_empty() {
-            if args.select {
-                println!("{}", target);
-                return Ok(());
-            }
 
-            git_commit_fixup(&target)?;
+        if target.is_empty() {
+            return Ok(());
         }
+
+        if ! is_valid_git_rev(&target)? {
+            eprintln!("Selected commit '{}' not found\nPossibly --format or smash.format doesn't return a hash", target);
+            exit(1);
+        }
+
+        if args.select {
+            println!("{}", target);
+            return Ok(());
+        }
+
+        git_commit_fixup(&target)?;
     }
 
     Ok(())
+}
+
+fn is_valid_git_rev(rev: &str) -> Result<bool> {
+    let git_bin = "git";
+    let files_args = vec!["rev-parse", "--verify", &rev];
+    let mut cmd = Command::new(&git_bin)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .args(&files_args)
+        .spawn()?;
+    Ok(cmd.wait()?.success())
 }
 
 fn git_commit_fixup(target: &str) -> Result<()> {
