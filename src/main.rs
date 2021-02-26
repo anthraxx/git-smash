@@ -8,7 +8,7 @@ use std::process::{Command, Stdio, exit, Child};
 use std::io::{BufReader, BufRead, Write};
 use std::path::PathBuf;
 
-use anyhow::{Result};
+use anyhow::{Result, Context};
 use regex::Regex;
 
 fn run(args: Args) -> Result<()> {
@@ -19,7 +19,7 @@ fn run(args: Args) -> Result<()> {
         Some(ref format) => format,
     };
 
-    let toplevel = git_toplevel()?;
+    let toplevel = git_toplevel()?.context("failed to get git toplevel path")?;
     env::set_current_dir(&toplevel)?;
 
     let staged_files = git_staged_files()?;
@@ -34,9 +34,13 @@ fn run(args: Args) -> Result<()> {
     };
 
     let git_bin = "git";
+    let range = git_rev_range(args.local)?.ok_or_else(|| {
+        if writeln!(io::stderr(), "No local commits found\nTry --all or set smash.onlylocal=false to list published commits").is_err() {}
+        exit(1);
+    }).unwrap();
 
     'files: for filename in staged_files {
-        let file_revs_args = vec!["log", "--format=%H %s", "HEAD", "--", &filename];
+        let file_revs_args = vec!["log", "--format=%H %s", &range, "--", &filename];
         let mut cmd_file_revs = Command::new(&git_bin)
             .args(&file_revs_args)
             .stdout(Stdio::piped())
@@ -102,15 +106,43 @@ fn run(args: Args) -> Result<()> {
     Ok(())
 }
 
-fn git_toplevel() -> Result<PathBuf> {
+fn git_rev_range(local_only: bool) -> Result<Option<String>> {
+    let mut range = "HEAD";
+    let upstream = git_rev_parse("@{upstream}")?;
+
+    if local_only && upstream.is_some() {
+        let upstream = upstream.unwrap();
+        let head = git_rev_parse("HEAD")?.context("failed to rev parse HEAD")?;
+        if upstream == head {
+            return Ok(None);
+        }
+        range="@{upstream}..HEAD";
+    }
+
+    Ok(Some(range.to_string()))
+}
+
+fn git_rev_parse(rev: &str) -> Result<Option<String>> {
+    git_rev_parse_stderr(rev, Stdio::piped())
+}
+
+fn git_rev_parse_stderr<T: Into<Stdio>>(rev: &str, stderr: T) -> Result<Option<String>> {
     let git_bin = "git";
-    let args = vec!["rev-parse", "--show-toplevel"];
+    let args = vec!["rev-parse", rev];
     let cmd = Command::new(&git_bin)
         .stdout(Stdio::piped())
+        .stderr(stderr)
         .args(&args)
         .spawn()?;
     let output = cmd.wait_with_output()?;
-    Ok(PathBuf::from(String::from_utf8_lossy(&output.stdout).into_owned().trim_end()))
+    if ! output.status.success() {
+        return Ok(None);
+    }
+    Ok(Some(String::from_utf8_lossy(&output.stdout).into_owned().trim_end().to_owned()))
+}
+
+fn git_toplevel() -> Result<Option<PathBuf>> {
+    Ok(git_rev_parse_stderr("--show-toplevel", Stdio::inherit())?.map(|e| PathBuf::from(e)))
 }
 
 fn is_valid_git_rev(rev: &str) -> Result<bool> {

@@ -17,4 +17,10 @@ pub struct Args {
     /// Number of commits per file
     #[structopt(long, short = "n", default_value = "4")]
     pub commits: u32,
+    /// List all revs including already published commits
+    #[structopt(long, short = "a", group = "range")]
+    pub all: bool,
+    /// Limit the listed revs to local commits
+    #[structopt(long, short = "l", group = "range")]
+    pub local: bool,
 }
