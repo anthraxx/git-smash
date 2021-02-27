@@ -222,7 +222,10 @@ fn git_commit_fixup(target: &str) -> Result<()> {
     let cmd_commit = Command::new(&git_bin)
         .args(&files_args)
         .spawn()?;
-    cmd_commit.wait_with_output()?;
+    let output = cmd_commit.wait_with_output()?;
+    if ! output.status.success() {
+        exit(output.status.code().unwrap_or_else(|| 1));
+    }
     Ok(())
 }
 
