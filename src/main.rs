@@ -219,19 +219,10 @@ fn is_valid_git_rev(rev: &str) -> Result<bool> {
 fn git_commit_fixup(target: &str) -> Result<()> {
     let git_bin = "git";
     let files_args = vec!["commit", "--no-edit", "--fixup", &target];
-    let mut cmd_commit = Command::new(&git_bin)
-        .stdout(Stdio::piped())
+    let cmd_commit = Command::new(&git_bin)
         .args(&files_args)
         .spawn()?;
-
-    let stdout = cmd_commit.stdout.as_mut().unwrap();
-    let stdout_reader = BufReader::new(stdout);
-    let stdout_lines = stdout_reader.lines();
-    for line in stdout_lines {
-        if writeln!(io::stdout(), "{}", line?).is_err() {
-            break;
-        }
-    }
+    cmd_commit.wait_with_output()?;
     Ok(())
 }
 
