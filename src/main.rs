@@ -91,7 +91,7 @@ fn run(args: Args) -> Result<()> {
 
     if let Some(cmd_sk) = cmd_sk {
         let output = cmd_sk.wait_with_output()?;
-        let target = select_target(output.stdout.as_ref());
+        let target = select_target(output.stdout.as_ref())?;
 
         if target.is_empty() {
             return Ok(());
@@ -164,19 +164,22 @@ fn git_rev_root() -> Result<String> {
 }
 
 fn git_rev_range(local_only: bool) -> Result<Option<String>> {
-    let mut range = "HEAD";
-    let upstream = git_rev_parse("@{upstream}")?;
+    let head = "HEAD".to_string();
 
-    if local_only && upstream.is_some() {
-        let upstream = upstream.unwrap();
+    if ! local_only {
+        return Ok(Some(head));
+    }
+
+    let upstream = git_rev_parse("@{upstream}")?;
+    if let Some(upstream) = upstream {
         let head = git_rev_parse("HEAD")?.context("failed to rev parse HEAD")?;
         if upstream == head {
             return Ok(None);
         }
-        range = "@{upstream}..HEAD";
+        Ok(Some("@{upstream}..HEAD".to_string()))
     }
 
-    Ok(Some(range.to_string()))
+    Ok(Some(head))
 }
 
 fn git_rev_parse(rev: &str) -> Result<Option<String>> {
@@ -273,9 +276,9 @@ fn format_target(commit: &str, format: &str) -> Result<Vec<u8>> {
     Ok(output.stdout)
 }
 
-fn select_target(line: &[u8]) -> String {
+fn select_target(line: &[u8]) -> Result<String> {
     let cow = String::from_utf8_lossy(line);
-    cow.splitn(2, " ").next().unwrap().into()
+    Ok(cow.splitn(2, " ").next().context("failed to split first part of the target")?.into())
 }
 
 fn main() {
