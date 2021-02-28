@@ -9,11 +9,8 @@ use std::process::{exit, Child, Command, Stdio};
 use std::{env, io, str};
 
 use anyhow::{bail, Context, Result};
-use regex::Regex;
 
 fn run(args: Args) -> Result<()> {
-    let re_fixup = Regex::new(r"^[a-f0-9]+ (fixup|squash)! ")?;
-
     let format = match args.format {
         None => "%C(yellow)%h%C(reset) %s %C(cyan)<%an>%C(reset) %C(green)(%cr)%C(reset)%C(auto)%d%C(reset)",
         Some(ref format) => format,
@@ -22,7 +19,7 @@ fn run(args: Args) -> Result<()> {
     let toplevel = git_toplevel()?.context("failed to get git toplevel path")?;
     env::set_current_dir(&toplevel)?;
 
-    let staged_files = git_staged_files()?;
+    let mut staged_files = git_staged_files()?;
     if staged_files.is_empty() {
         if writeln!(
             io::stderr(),
@@ -44,48 +41,53 @@ fn run(args: Args) -> Result<()> {
         exit(1);
     }).unwrap();
 
-    'files: for filename in staged_files {
-        let file_revs_args = vec!["log", "--format=%H %s", &range, "--", &filename];
-        let mut cmd_file_revs = Command::new(&git_bin)
-            .args(&file_revs_args)
-            .stdout(Stdio::piped())
-            .spawn()?;
+    let mut file_revs_args = vec![
+        "log",
+        "--invert-grep",
+        "--extended-regexp",
+        "--grep",
+        "^(fixup|squash)! .*$",
+        "--format=%H %s",
+        &range,
+    ]
+    .into_iter()
+    .map(|e| e.to_string())
+    .collect::<Vec<_>>();
+    if args.commits > 0 {
+        file_revs_args.push(format!("-{}", args.commits).to_string());
+    }
+    file_revs_args.push("--".to_string());
+    file_revs_args.append(&mut staged_files);
 
-        let stdout = cmd_file_revs.stdout.as_mut().unwrap();
-        let stdout_reader = BufReader::new(stdout);
-        let stdout_lines = stdout_reader.lines();
+    let mut cmd_file_revs = Command::new(&git_bin)
+        .args(&file_revs_args)
+        .stdout(Stdio::piped())
+        .spawn()?;
 
-        let mut count = 0;
-        for file_rev in stdout_lines {
-            let line = file_rev?;
-            if re_fixup.is_match(&line) {
-                continue;
+    let stdout = cmd_file_revs.stdout.as_mut().context("failed to acquire stdout from git log command")?;
+    let stdout_reader = BufReader::new(stdout);
+    let stdout_lines = stdout_reader.lines();
+
+    for file_rev in stdout_lines {
+        let line = file_rev?;
+        let line = line.split_whitespace().next().context("failed to split commit hash from input line")?;
+        let target = format_target(&line, &format)?;
+
+        if args.list {
+            if write!(io::stdout(), "{}", String::from_utf8_lossy(&target)).is_err() {
+                return Ok(());
             }
-            let line = line.splitn(2, " ").next().unwrap();
-
-            let target = format_target(&line, &format)?;
-
-            if args.list {
-                if write!(io::stdout(), "{}", String::from_utf8_lossy(&target)).is_err() {
-                    return Ok(());
-                }
-            } else {
-                if let Some(ref mut cmd_sk) = cmd_sk {
-                    if let Some(ref mut stdin) = cmd_sk.stdin {
-                        if stdin.write(&target).is_err() {
-                            break 'files;
-                        }
+        } else {
+            if let Some(ref mut cmd_sk) = cmd_sk {
+                if let Some(ref mut stdin) = cmd_sk.stdin {
+                    if stdin.write(&target).is_err() {
+                        break;
                     }
                 }
             }
-
-            count += 1;
-            if count >= args.commits {
-                break;
-            }
         }
-        cmd_file_revs.kill()?;
     }
+    cmd_file_revs.kill()?;
 
     if let Some(cmd_sk) = cmd_sk {
         let output = cmd_sk.wait_with_output()?;
@@ -131,7 +133,7 @@ fn git_rebase(rev: &str, interactive: bool) -> Result<()> {
         &rev,
     ];
     let mut cmd = Command::new(&git_bin);
-    if ! interactive {
+    if !interactive {
         cmd.env("GIT_EDITOR", "true");
     }
     let mut cmd = cmd.args(&args).spawn()?;
@@ -219,11 +221,9 @@ fn is_valid_git_rev(rev: &str) -> Result<bool> {
 fn git_commit_fixup(target: &str) -> Result<()> {
     let git_bin = "git";
     let files_args = vec!["commit", "--no-edit", "--fixup", &target];
-    let cmd_commit = Command::new(&git_bin)
-        .args(&files_args)
-        .spawn()?;
+    let cmd_commit = Command::new(&git_bin).args(&files_args).spawn()?;
     let output = cmd_commit.wait_with_output()?;
-    if ! output.status.success() {
+    if !output.status.success() {
         exit(output.status.code().unwrap_or_else(|| 1));
     }
     Ok(())
@@ -232,13 +232,19 @@ fn git_commit_fixup(target: &str) -> Result<()> {
 fn git_staged_files() -> Result<Vec<String>> {
     let git_bin = "git";
     let files_args = vec!["diff", "--color=never", "--name-only", "--cached"];
-    let mut cmd_files = Command::new(&git_bin)
+    let cmd_files = Command::new(&git_bin)
         .stdout(Stdio::piped())
         .args(&files_args)
         .spawn()?;
-    let stdout = cmd_files.stdout.as_mut().unwrap();
-    let stdout_reader = BufReader::new(stdout);
-    Ok(stdout_reader.lines().filter_map(|e| e.ok()).collect())
+    let output = cmd_files.wait_with_output()?;
+    if !output.status.success() {
+        exit(output.status.code().unwrap_or_else(|| 1));
+    }
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .trim()
+        .lines()
+        .map(|e| e.to_owned())
+        .collect())
 }
 
 fn spawn_menu() -> Result<Child> {

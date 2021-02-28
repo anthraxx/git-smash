@@ -13,8 +13,8 @@ pub struct Args {
     /// Git log format to pretty print the targets
     #[structopt(long)]
     pub format: Option<String>,
-    /// Number of commits per file
-    #[structopt(long, short = "n", default_value = "4")]
+    /// Limit number of listed commits (0 for unlimited stream)
+    #[structopt(long, short = "n", default_value = "0")]
     pub commits: u32,
     /// List all revs including already published commits
     #[structopt(long, short = "a", group = "range")]
