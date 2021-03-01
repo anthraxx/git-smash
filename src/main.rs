@@ -21,12 +21,11 @@ fn run(args: Args) -> Result<()> {
 
     let mut staged_files = git_staged_files()?;
     if staged_files.is_empty() {
-        if writeln!(
+        writeln!(
             io::stderr(),
             "Changes not staged for commit\nUse git add -p to stage changed files"
         )
-        .is_err()
-        {}
+        .ok();
         exit(1);
     }
 
@@ -37,7 +36,7 @@ fn run(args: Args) -> Result<()> {
 
     let git_bin = "git";
     let range = git_rev_range(args.local)?.ok_or_else(|| {
-        if writeln!(io::stderr(), "No local commits found\nTry --all or set smash.onlylocal=false to list published commits").is_err() {}
+        writeln!(io::stderr(), "No local commits found\nTry --all or set smash.onlylocal=false to list published commits").ok();
         exit(1);
     }).unwrap();
 
@@ -64,17 +63,24 @@ fn run(args: Args) -> Result<()> {
         .stdout(Stdio::piped())
         .spawn()?;
 
-    let stdout = cmd_file_revs.stdout.as_mut().context("failed to acquire stdout from git log command")?;
+    let stdout = cmd_file_revs
+        .stdout
+        .as_mut()
+        .context("failed to acquire stdout from git log command")?;
     let stdout_reader = BufReader::new(stdout);
     let stdout_lines = stdout_reader.lines();
 
     for file_rev in stdout_lines {
         let line = file_rev?;
-        let line = line.split_whitespace().next().context("failed to split commit hash from input line")?;
+        let line = line
+            .split_whitespace()
+            .next()
+            .context("failed to split commit hash from input line")?;
         let target = format_target(&line, &format)?;
 
         if args.list {
-            if write!(io::stdout(), "{}", String::from_utf8_lossy(&target)).is_err() {
+            let mut stdout = io::stdout();
+            if stdout.write_all(&target).is_err() {
                 return Ok(());
             }
         } else {
@@ -98,12 +104,12 @@ fn run(args: Args) -> Result<()> {
         }
 
         if !is_valid_git_rev(&target)? {
-            if writeln!(io::stderr(), "Selected commit '{}' not found\nPossibly --format or smash.format doesn't return a hash", target).is_err() {}
+            writeln!(io::stderr(), "Selected commit '{}' not found\nPossibly --format or smash.format doesn't return a hash", target).ok();
             exit(1);
         }
 
         if args.select {
-            if writeln!(io::stdout(), "{}", &target).is_err() {}
+            writeln!(io::stdout(), "{}", &target).ok();
             return Ok(());
         }
 
@@ -149,11 +155,10 @@ fn git_rebase(rev: &str, interactive: bool) -> Result<()> {
 fn git_rev_root() -> Result<String> {
     let git_bin = "git";
     let args = vec!["rev-list", "--max-parents=0", "HEAD"];
-    let cmd = Command::new(&git_bin)
+    let output = Command::new(&git_bin)
         .stdout(Stdio::piped())
         .args(&args)
-        .spawn()?;
-    let output = cmd.wait_with_output()?;
+        .output()?;
     if !output.status.success() {
         bail!("failed to get git rev root");
     }
@@ -166,7 +171,7 @@ fn git_rev_root() -> Result<String> {
 fn git_rev_range(local_only: bool) -> Result<Option<String>> {
     let head = "HEAD".to_string();
 
-    if ! local_only {
+    if !local_only {
         return Ok(Some(head));
     }
 
@@ -176,7 +181,7 @@ fn git_rev_range(local_only: bool) -> Result<Option<String>> {
         if upstream == head {
             return Ok(None);
         }
-        Ok(Some("@{upstream}..HEAD".to_string()))
+        return Ok(Some("@{upstream}..HEAD".to_string()));
     }
 
     Ok(Some(head))
@@ -189,12 +194,11 @@ fn git_rev_parse(rev: &str) -> Result<Option<String>> {
 fn git_rev_parse_stderr<T: Into<Stdio>>(rev: &str, stderr: T) -> Result<Option<String>> {
     let git_bin = "git";
     let args = vec!["rev-parse", rev];
-    let cmd = Command::new(&git_bin)
+    let output = Command::new(&git_bin)
         .stdout(Stdio::piped())
         .stderr(stderr)
         .args(&args)
-        .spawn()?;
-    let output = cmd.wait_with_output()?;
+        .output()?;
     if !output.status.success() {
         return Ok(None);
     }
@@ -224,8 +228,7 @@ fn is_valid_git_rev(rev: &str) -> Result<bool> {
 fn git_commit_fixup(target: &str) -> Result<()> {
     let git_bin = "git";
     let files_args = vec!["commit", "--no-edit", "--fixup", &target];
-    let cmd_commit = Command::new(&git_bin).args(&files_args).spawn()?;
-    let output = cmd_commit.wait_with_output()?;
+    let output = Command::new(&git_bin).args(&files_args).output()?;
     if !output.status.success() {
         exit(output.status.code().unwrap_or_else(|| 1));
     }
@@ -235,11 +238,10 @@ fn git_commit_fixup(target: &str) -> Result<()> {
 fn git_staged_files() -> Result<Vec<String>> {
     let git_bin = "git";
     let files_args = vec!["diff", "--color=never", "--name-only", "--cached"];
-    let cmd_files = Command::new(&git_bin)
+    let output = Command::new(&git_bin)
         .stdout(Stdio::piped())
         .args(&files_args)
-        .spawn()?;
-    let output = cmd_files.wait_with_output()?;
+        .output()?;
     if !output.status.success() {
         exit(output.status.code().unwrap_or_else(|| 1));
     }
@@ -268,17 +270,20 @@ fn format_target(commit: &str, format: &str) -> Result<Vec<u8>> {
     let git_bin = "git";
     let format = format!("--format={}", format);
     let args = vec!["--no-pager", "log", "-1", &format, &commit];
-    let cmd = Command::new(&git_bin)
+    let output = Command::new(&git_bin)
         .stdout(Stdio::piped())
         .args(&args)
-        .spawn()?;
-    let output = cmd.wait_with_output()?;
+        .output()?;
     Ok(output.stdout)
 }
 
 fn select_target(line: &[u8]) -> Result<String> {
     let cow = String::from_utf8_lossy(line);
-    Ok(cow.splitn(2, " ").next().context("failed to split first part of the target")?.into())
+    Ok(cow
+        .splitn(2, " ")
+        .next()
+        .context("failed to split first part of the target")?
+        .into())
 }
 
 fn main() {
