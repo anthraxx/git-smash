@@ -1,14 +1,15 @@
 use args::*;
 mod args;
 
+use errors::*;
+mod errors;
+
 use structopt::StructOpt;
 
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{exit, Child, Command, Stdio};
 use std::{env, io, str};
-
-use anyhow::{bail, Context, Result};
 
 const DEFAULT_LIST_FORMAT: &str =
     "%C(yellow)%h%C(reset) %s %C(cyan)<%an>%C(reset) %C(green)(%cr)%C(reset)%C(auto)%d%C(reset)";
@@ -33,7 +34,7 @@ fn run(args: Args) -> Result<()> {
     }
 
     let mut cmd_sk = match args.list {
-        false => Option::Some(spawn_menu()?),
+        false => Option::Some(spawn_menu().context("failed to spawn menu command")?),
         true => Option::None,
     };
 
@@ -57,7 +58,7 @@ fn run(args: Args) -> Result<()> {
             .split_whitespace()
             .next()
             .context("failed to split commit hash from input line")?;
-        let target = format_target(&line, &format)?;
+        let target = format_target(line, format)?;
 
         if args.list {
             let mut stdout = io::stdout();
@@ -85,8 +86,7 @@ fn run(args: Args) -> Result<()> {
         }
 
         if !is_valid_git_rev(&target)? {
-            writeln!(io::stderr(), "Selected commit '{}' not found\nPossibly --format or smash.format doesn't return a hash", target).ok();
-            exit(1);
+            bail!("Selected commit '{}' not found\nPossibly --format or smash.format doesn't return a hash", target);
         }
 
         if args.select {
@@ -111,7 +111,6 @@ fn git_rebase(rev: &str, interactive: bool) -> Result<()> {
         false => format!("{}^", rev),
     };
 
-    let git_bin = "git";
     let args = vec![
         "rebase",
         "--interactive",
@@ -119,7 +118,7 @@ fn git_rebase(rev: &str, interactive: bool) -> Result<()> {
         "--autostash",
         &rev,
     ];
-    let mut cmd = Command::new(&git_bin);
+    let mut cmd = Command::new("git");
     if !interactive {
         cmd.env("GIT_EDITOR", "true");
     }
@@ -134,9 +133,8 @@ fn git_rebase(rev: &str, interactive: bool) -> Result<()> {
 }
 
 fn git_rev_root() -> Result<String> {
-    let git_bin = "git";
     let args = vec!["rev-list", "--max-parents=0", "HEAD"];
-    let output = Command::new(&git_bin)
+    let output = Command::new("git")
         .stdout(Stdio::piped())
         .args(&args)
         .output()?;
@@ -173,9 +171,8 @@ fn git_rev_parse(rev: &str) -> Result<Option<String>> {
 }
 
 fn git_rev_parse_stderr<T: Into<Stdio>>(rev: &str, stderr: T) -> Result<Option<String>> {
-    let git_bin = "git";
     let args = vec!["rev-parse", rev];
-    let output = Command::new(&git_bin)
+    let output = Command::new("git")
         .stdout(Stdio::piped())
         .stderr(stderr)
         .args(&args)
@@ -196,9 +193,8 @@ fn git_toplevel() -> Result<Option<PathBuf>> {
 }
 
 fn is_valid_git_rev(rev: &str) -> Result<bool> {
-    let git_bin = "git";
-    let files_args = vec!["rev-parse", "--verify", &rev];
-    let mut cmd = Command::new(&git_bin)
+    let files_args = vec!["rev-parse", "--verify", rev];
+    let mut cmd = Command::new("git")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .args(&files_args)
@@ -207,9 +203,8 @@ fn is_valid_git_rev(rev: &str) -> Result<bool> {
 }
 
 fn git_commit_fixup(target: &str) -> Result<()> {
-    let git_bin = "git";
-    let files_args = vec!["commit", "--no-edit", "--fixup", &target];
-    let output = Command::new(&git_bin).args(&files_args).output()?;
+    let files_args = vec!["commit", "--no-edit", "--fixup", target];
+    let output = Command::new("git").args(&files_args).output()?;
     if !output.status.success() {
         exit(output.status.code().unwrap_or_else(|| 1));
     }
@@ -217,9 +212,8 @@ fn git_commit_fixup(target: &str) -> Result<()> {
 }
 
 fn git_staged_files() -> Result<Vec<String>> {
-    let git_bin = "git";
     let files_args = vec!["diff", "--color=never", "--name-only", "--cached"];
-    let output = Command::new(&git_bin)
+    let output = Command::new("git")
         .stdout(Stdio::piped())
         .args(&files_args)
         .output()?;
@@ -241,7 +235,7 @@ fn spawn_file_revs(range: &str, staged_files: &mut Vec<String>, max_count: u32) 
         "--grep",
         "^(fixup|squash)! .*$",
         "--format=%H %s",
-        &range,
+        range,
     ]
     .into_iter()
     .map(|e| e.to_string())
@@ -259,24 +253,18 @@ fn spawn_file_revs(range: &str, staged_files: &mut Vec<String>, max_count: u32) 
 }
 
 fn spawn_menu() -> Result<Child> {
-    let sk_bin = "sk";
-    let sk_args = vec![
-        "--ansi",
-        "--preview",
-        "git show --stat --patch --color {+1}",
-    ];
-    Ok(Command::new(&sk_bin)
-        .args(&sk_args)
+    let menu = resolve_menu_command()?;
+    Ok(Command::new(menu.command)
+        .args(menu.args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()?)
 }
 
 fn format_target(commit: &str, format: &str) -> Result<Vec<u8>> {
-    let git_bin = "git";
     let format = format!("--format={}", format);
-    let args = vec!["--no-pager", "log", "-1", &format, &commit];
-    let output = Command::new(&git_bin)
+    let args = vec!["--no-pager", "log", "-1", &format, commit];
+    let output = Command::new("git")
         .stdout(Stdio::piped())
         .args(&args)
         .output()?;
@@ -298,7 +286,7 @@ fn main() {
     if let Err(err) = run(args) {
         eprintln!("Error: {}", err);
         for cause in err.chain().skip(1) {
-            eprintln!("Because: {}", cause);
+            eprintln!("{}", cause);
         }
         exit(1);
     }
