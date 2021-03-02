@@ -11,7 +11,6 @@ mod git;
 use structopt::StructOpt;
 
 use std::io::{BufRead, BufReader, Write};
-use std::path::PathBuf;
 use std::process::{exit, Child, Command, Stdio};
 use std::{env, io, str};
 
@@ -117,129 +116,6 @@ fn run(args: Args) -> Result<()> {
     }
 
     Ok(())
-}
-
-fn git_rebase(rev: &str, interactive: bool) -> Result<()> {
-    let root = git_rev_root()?;
-    let rev = match root.starts_with(rev) {
-        true => "--root".to_string(),
-        false => format!("{}^", rev),
-    };
-
-    let args = vec![
-        "rebase",
-        "--interactive",
-        "--autosquash",
-        "--autostash",
-        &rev,
-    ];
-    let mut cmd = Command::new("git");
-    if !interactive {
-        cmd.env("GIT_EDITOR", "true");
-    }
-    let mut cmd = cmd.args(&args).spawn()?;
-    let status = cmd.wait()?;
-
-    if !status.success() {
-        exit(status.code().unwrap_or_else(|| 1));
-    }
-
-    Ok(())
-}
-
-fn git_rev_root() -> Result<String> {
-    let args = vec!["rev-list", "--max-parents=0", "HEAD"];
-    let output = Command::new("git")
-        .stdout(Stdio::piped())
-        .args(&args)
-        .output()?;
-    if !output.status.success() {
-        bail!("failed to get git rev root");
-    }
-    Ok(String::from_utf8_lossy(&output.stdout)
-        .into_owned()
-        .trim_end()
-        .to_owned())
-}
-
-fn git_rev_range(local_only: bool) -> Result<Option<String>> {
-    let head = "HEAD".to_string();
-
-    if !local_only {
-        return Ok(Some(head));
-    }
-
-    let upstream = git_rev_parse("@{upstream}")?;
-    if let Some(upstream) = upstream {
-        let head = git_rev_parse("HEAD")?.context("failed to rev parse HEAD")?;
-        if upstream == head {
-            return Ok(None);
-        }
-        return Ok(Some("@{upstream}..HEAD".to_string()));
-    }
-
-    Ok(Some(head))
-}
-
-fn git_rev_parse(rev: &str) -> Result<Option<String>> {
-    git_rev_parse_stderr(rev, Stdio::piped())
-}
-
-fn git_rev_parse_stderr<T: Into<Stdio>>(rev: &str, stderr: T) -> Result<Option<String>> {
-    let args = vec!["rev-parse", rev];
-    let output = Command::new("git")
-        .stdout(Stdio::piped())
-        .stderr(stderr)
-        .args(&args)
-        .output()?;
-    if !output.status.success() {
-        return Ok(None);
-    }
-    Ok(Some(
-        String::from_utf8_lossy(&output.stdout)
-            .into_owned()
-            .trim_end()
-            .to_owned(),
-    ))
-}
-
-fn git_toplevel() -> Result<Option<PathBuf>> {
-    Ok(git_rev_parse_stderr("--show-toplevel", Stdio::inherit())?.map(|e| PathBuf::from(e)))
-}
-
-fn is_valid_git_rev(rev: &str) -> Result<bool> {
-    let files_args = vec!["rev-parse", "--verify", rev];
-    let mut cmd = Command::new("git")
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .args(&files_args)
-        .spawn()?;
-    Ok(cmd.wait()?.success())
-}
-
-fn git_commit_fixup(target: &str) -> Result<()> {
-    let files_args = vec!["commit", "--no-edit", "--fixup", target];
-    let output = Command::new("git").args(&files_args).output()?;
-    if !output.status.success() {
-        exit(output.status.code().unwrap_or_else(|| 1));
-    }
-    Ok(())
-}
-
-fn git_staged_files() -> Result<Vec<String>> {
-    let files_args = vec!["diff", "--color=never", "--name-only", "--cached"];
-    let output = Command::new("git")
-        .stdout(Stdio::piped())
-        .args(&files_args)
-        .output()?;
-    if !output.status.success() {
-        exit(output.status.code().unwrap_or_else(|| 1));
-    }
-    Ok(String::from_utf8_lossy(&output.stdout)
-        .trim()
-        .lines()
-        .map(|e| e.to_owned())
-        .collect())
 }
 
 fn spawn_file_revs(range: &str, staged_files: &mut Vec<String>, max_count: u32) -> Result<Child> {
