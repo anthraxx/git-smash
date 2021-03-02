@@ -5,6 +5,9 @@ mod args;
 use errors::*;
 mod errors;
 
+use git::*;
+mod git;
+
 use structopt::StructOpt;
 
 use std::io::{BufRead, BufReader, Write};
