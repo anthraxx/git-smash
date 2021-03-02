@@ -15,6 +15,17 @@ use std::{env, io, str};
 const DEFAULT_LIST_FORMAT: &str =
     "%C(yellow)%h%C(reset) %s %C(cyan)<%an>%C(reset) %C(green)(%cr)%C(reset)%C(auto)%d%C(reset)";
 
+struct MenuCommand {
+    command: String,
+    args: Vec<String>,
+}
+
+impl MenuCommand {
+    fn new(command: String, args: Vec<String>) -> Self {
+        Self { command, args }
+    }
+}
+
 fn run(args: Args) -> Result<()> {
     let format = match args.format {
         None => DEFAULT_LIST_FORMAT,
@@ -279,6 +290,33 @@ fn select_target(line: &[u8]) -> Result<String> {
         .next()
         .context("failed to split first part of the target")?
         .into())
+}
+
+fn resolve_command(command: &str) -> Result<Option<String>> {
+    let output = Command::new("sh")
+        .stdout(Stdio::piped())
+        .args(vec!["-c", format!("command -v {}", &command).as_ref()])
+        .output()?;
+    if !output.status.success() {
+        return Ok(None);
+    }
+    Ok(Some(
+        String::from_utf8_lossy(&output.stdout).trim().to_owned(),
+    ))
+}
+
+fn resolve_menu_command() -> Result<MenuCommand> {
+    let fuzzy_args = vec![
+        "--ansi".to_string(),
+        "--preview".to_string(),
+        "git show --stat --patch --color {+1}".to_string(),
+    ];
+    for cmd in &[("sk", &fuzzy_args), ("fzf", &fuzzy_args)] {
+        if let Some(bin) = resolve_command(cmd.0)? {
+            return Ok(MenuCommand::new(bin, cmd.1.to_owned()));
+        }
+    }
+    bail!("Can't find any supported fuzzy matcher or menu command\nPlease install skim, fzf or configure one with smash.menu");
 }
 
 fn main() {
