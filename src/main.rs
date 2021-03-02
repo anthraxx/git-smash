@@ -1,3 +1,4 @@
+#![deny(clippy::nursery, clippy::cargo)]
 use args::*;
 mod args;
 
