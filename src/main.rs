@@ -10,9 +10,12 @@ use std::{env, io, str};
 
 use anyhow::{bail, Context, Result};
 
+const DEFAULT_LIST_FORMAT: &str =
+    "%C(yellow)%h%C(reset) %s %C(cyan)<%an>%C(reset) %C(green)(%cr)%C(reset)%C(auto)%d%C(reset)";
+
 fn run(args: Args) -> Result<()> {
     let format = match args.format {
-        None => "%C(yellow)%h%C(reset) %s %C(cyan)<%an>%C(reset) %C(green)(%cr)%C(reset)%C(auto)%d%C(reset)",
+        None => DEFAULT_LIST_FORMAT,
         Some(ref format) => format,
     };
 
@@ -34,34 +37,12 @@ fn run(args: Args) -> Result<()> {
         true => Option::None,
     };
 
-    let git_bin = "git";
     let range = git_rev_range(args.local)?.ok_or_else(|| {
         writeln!(io::stderr(), "No local commits found\nTry --all or set smash.onlylocal=false to list published commits").ok();
         exit(1);
     }).unwrap();
 
-    let mut file_revs_args = vec![
-        "log",
-        "--invert-grep",
-        "--extended-regexp",
-        "--grep",
-        "^(fixup|squash)! .*$",
-        "--format=%H %s",
-        &range,
-    ]
-    .into_iter()
-    .map(|e| e.to_string())
-    .collect::<Vec<_>>();
-    if args.commits > 0 {
-        file_revs_args.push(format!("-{}", args.commits).to_string());
-    }
-    file_revs_args.push("--".to_string());
-    file_revs_args.append(&mut staged_files);
-
-    let mut cmd_file_revs = Command::new(&git_bin)
-        .args(&file_revs_args)
-        .stdout(Stdio::piped())
-        .spawn()?;
+    let mut cmd_file_revs = spawn_file_revs(&range, &mut staged_files, args.commits)?;
 
     let stdout = cmd_file_revs
         .stdout
@@ -250,6 +231,31 @@ fn git_staged_files() -> Result<Vec<String>> {
         .lines()
         .map(|e| e.to_owned())
         .collect())
+}
+
+fn spawn_file_revs(range: &str, staged_files: &mut Vec<String>, max_count: u32) -> Result<Child> {
+    let mut file_revs_args = vec![
+        "log",
+        "--invert-grep",
+        "--extended-regexp",
+        "--grep",
+        "^(fixup|squash)! .*$",
+        "--format=%H %s",
+        &range,
+    ]
+    .into_iter()
+    .map(|e| e.to_string())
+    .collect::<Vec<_>>();
+    if max_count > 0 {
+        file_revs_args.push(format!("-{}", max_count).to_string());
+    }
+    file_revs_args.push("--".to_string());
+    file_revs_args.append(staged_files);
+
+    Ok(Command::new("git")
+        .args(&file_revs_args)
+        .stdout(Stdio::piped())
+        .spawn()?)
 }
 
 fn spawn_menu() -> Result<Child> {
