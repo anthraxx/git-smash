@@ -57,7 +57,8 @@ fn run(args: Args) -> Result<()> {
         exit(1);
     }).unwrap();
 
-    let mut cmd_file_revs = spawn_file_revs(&mut staged_files, &range, config.max_count)?;
+    let mut cmd_file_revs =
+        spawn_file_revs(&mut staged_files, &config.format, &range, config.max_count)?;
 
     let stdout = cmd_file_revs
         .stdout
@@ -68,23 +69,17 @@ fn run(args: Args) -> Result<()> {
 
     for file_rev in stdout_lines {
         let line = file_rev?;
-        let line = line
-            .split_whitespace()
-            .next()
-            .context("failed to split commit hash from input line")?;
-        let line = format_target(line, &config.format)?;
-
         match config.mode {
             DisplayMode::List => {
                 let mut stdout = io::stdout();
-                if writeln!(stdout, "{}", String::from_utf8_lossy(&line)).is_err() {
+                if writeln!(stdout, "{}", line).is_err() {
                     return Ok(());
                 }
             }
             _ => {
                 if let Some(ref mut cmd_sk) = cmd_sk {
                     if let Some(ref mut stdin) = cmd_sk.stdin {
-                        if writeln!(stdin, "{}", String::from_utf8_lossy(&line)).is_err() {
+                        if writeln!(stdin, "{}", &line).is_err() {
                             break;
                         }
                     }
@@ -125,15 +120,20 @@ fn run(args: Args) -> Result<()> {
     Ok(())
 }
 
-fn spawn_file_revs(staged_files: &mut Vec<String>, range: &str, max_count: u32) -> Result<Child> {
+fn spawn_file_revs(
+    staged_files: &mut Vec<String>,
+    format: &str,
+    range: &str,
+    max_count: u32,
+) -> Result<Child> {
     let mut file_revs_args = vec![
-       "--no-pager",
+        "--no-pager",
         "log",
         "--invert-grep",
         "--extended-regexp",
         "--grep",
         "^(fixup|squash)! .*$",
-        "--format=%H %s",
+        format!("--format={}", format).as_str(),
         range,
     ]
     .into_iter()
@@ -194,16 +194,6 @@ fn resolve_menu_command() -> Result<MenuCommand> {
         }
     }
     bail!("Can't find any supported fuzzy matcher or menu command\nPlease install skim, fzf or configure one with smash.menu");
-}
-
-fn format_target(commit: &str, format: &str) -> Result<Vec<u8>> {
-    let format = format!("--format={}", format);
-    let args = vec!["--no-pager", "log", "-1", &format, commit];
-    let output = Command::new("git")
-        .stdout(Stdio::piped())
-        .args(&args)
-        .output()?;
-    Ok(output.stdout)
 }
 
 fn main() {
