@@ -1,7 +1,8 @@
-use std::process::{Command, Stdio, exit};
-
 use crate::errors::*;
+
+use crate::config::{CommitRange, Config};
 use std::path::PathBuf;
+use std::process::{exit, Command, Stdio};
 
 pub struct GitConfigBuilder {
     key: &'static str,
@@ -28,7 +29,7 @@ impl GitConfigBuilder {
         self
     }
 
-    pub fn get(&self) -> Result<String> {
+    pub fn get(&self) -> Result<Option<String>> {
         let mut args = vec!["config", "--get"];
         if let Some(default) = self.default {
             args.push("--default");
@@ -46,19 +47,42 @@ impl GitConfigBuilder {
             .args(&args)
             .output()?;
         if !output.status.success() {
-            bail!("{}", String::from_utf8_lossy(output.stderr.as_ref()).trim());
+            match output.status.code() {
+                Some(1) => {
+                    return Ok(None);
+                }
+                _ => bail!("{}", String::from_utf8_lossy(output.stderr.as_ref()).trim()),
+            }
         }
-        Ok(String::from_utf8_lossy(&output.stdout)
-            .trim_end()
-            .to_owned())
+        Ok(Some(
+            String::from_utf8_lossy(&output.stdout)
+                .trim_end()
+                .to_owned(),
+        ))
     }
 
-    pub fn get_as_bool(&mut self) -> Result<bool> {
-        let value: bool = self
-            .get()?
-            .parse()
-            .with_context(|| anyhow!("Failed to parse key '{}' as bool", self.key))?;
-        Ok(value)
+    pub fn get_as_bool(&mut self) -> Result<Option<bool>> {
+        let value = self.get()?;
+        match value {
+            None => Ok(None),
+            Some(value) => {
+                Ok(Some(value.parse::<bool>().with_context(|| {
+                    anyhow!("Failed to parse key '{}' as bool", self.key)
+                })?))
+            }
+        }
+    }
+
+    pub fn get_as_int(&mut self) -> Result<Option<u32>> {
+        let value = self.get()?;
+        match value {
+            None => Ok(None),
+            Some(value) => {
+                Ok(Some(value.parse::<u32>().with_context(|| {
+                    anyhow!("Failed to parse key '{}' as u32", self.key)
+                })?))
+            }
+        }
     }
 }
 
@@ -105,23 +129,24 @@ pub fn git_rev_root() -> Result<String> {
         .to_owned())
 }
 
-pub fn git_rev_range(local_only: bool) -> Result<Option<String>> {
+pub fn git_rev_range(config: &Config) -> Result<Option<String>> {
     let head = "HEAD".to_string();
 
-    if !local_only {
-        return Ok(Some(head));
-    }
-
-    let upstream = git_rev_parse("@{upstream}")?;
-    if let Some(upstream) = upstream {
-        let head = git_rev_parse("HEAD")?.context("failed to rev parse HEAD")?;
-        if upstream == head {
-            return Ok(None);
+    return match &config.range {
+        CommitRange::All => Ok(Some(head)),
+        CommitRange::Local => {
+            let upstream = git_rev_parse("@{upstream}")?;
+            if let Some(upstream) = upstream {
+                let head = git_rev_parse("HEAD")?.context("failed to rev parse HEAD")?;
+                if upstream == head {
+                    return Ok(None);
+                }
+                return Ok(Some("@{upstream}..HEAD".to_string()));
+            }
+            Ok(Some(head))
         }
-        return Ok(Some("@{upstream}..HEAD".to_string()));
-    }
-
-    Ok(Some(head))
+        CommitRange::Range(range) => Ok(Some(range.into())),
+    };
 }
 
 pub fn git_rev_parse(rev: &str) -> Result<Option<String>> {

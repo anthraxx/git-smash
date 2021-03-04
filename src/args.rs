@@ -14,13 +14,13 @@ pub struct Args {
     #[structopt(long)]
     pub format: Option<String>,
     /// Limit number of listed commits (0 for unlimited stream)
-    #[structopt(long, short = "n", default_value = "0")]
-    pub commits: u32,
+    #[structopt(long, short = "n")]
+    pub max_count: Option<u32>,
     /// List all revs including already published commits
-    #[structopt(long, short = "a", group = "range")]
+    #[structopt(long, short = "a", group = "rev_range")]
     pub all: bool,
     /// Limit the listed revs to local commits
-    #[structopt(long, short = "l", group = "range")]
+    #[structopt(long, short = "l", group = "rev_range")]
     pub local: bool,
     /// Rebase the fixup commit into the target
     #[structopt(long, group = "autorebase")]
@@ -31,4 +31,7 @@ pub struct Args {
     /// Let the user edit the list of commits before rebasing
     #[structopt(long)]
     pub interactive: bool,
+    /// Limit the listed commits to the given range
+    #[structopt(long, group = "rev_range")]
+    pub range: Option<String>,
 }
