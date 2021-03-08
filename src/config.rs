@@ -30,6 +30,8 @@ pub struct Config {
     pub max_count: u32,
     pub auto_rebase: bool,
     pub interactive: bool,
+    pub blame: bool,
+    pub files: bool,
 }
 
 impl Config {
@@ -102,6 +104,8 @@ impl Config {
             } else {
                 false
             },
+            blame: true,
+            files: true,
         };
 
         Ok(config)

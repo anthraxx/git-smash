@@ -20,6 +20,9 @@ use std::io::{BufRead, BufReader, Write};
 use std::process::{exit, Child, Command, Stdio};
 use std::{env, io, str};
 
+use regex;
+use regex::Regex;
+
 struct MenuCommand {
     command: String,
     args: Vec<String>,
@@ -57,6 +60,11 @@ fn run(args: Args) -> Result<()> {
         exit(1);
     }).unwrap();
 
+    let commits_from_blame = match config.blame {
+        true => get_commits_from_blame(&staged_files, &range)?,
+        false => Vec::new(),
+    };
+
     let mut cmd_file_revs =
         spawn_file_revs(&mut staged_files, &config.format, &range, config.max_count)?;
 
@@ -67,24 +75,16 @@ fn run(args: Args) -> Result<()> {
     let stdout_reader = BufReader::new(stdout);
     let stdout_lines = stdout_reader.lines();
 
-    for file_rev in stdout_lines {
-        let line = file_rev?;
-        match config.mode {
-            DisplayMode::List => {
-                let mut stdout = io::stdout();
-                if writeln!(stdout, "{}", line).is_err() {
-                    return Ok(());
-                }
-            }
-            _ => {
-                if let Some(ref mut cmd_sk) = cmd_sk {
-                    if let Some(ref mut stdin) = cmd_sk.stdin {
-                        if writeln!(stdin, "{}", &line).is_err() {
-                            break;
-                        }
-                    }
-                }
-            }
+    for rev in commits_from_blame {
+        let target = format_target(&rev, &config.format)?;
+        if !process_target(&target, &config.mode, &mut cmd_sk) {
+            break;
+        }
+    }
+    for rev in stdout_lines {
+        let target = rev?;
+        if !process_target(&target, &config.mode, &mut cmd_sk) {
+            break;
         }
     }
 
@@ -120,6 +120,112 @@ fn run(args: Args) -> Result<()> {
     Ok(())
 }
 
+fn process_target(target: &str, mode: &DisplayMode, cmd_sk: &mut Option<Child>) -> bool {
+    match mode {
+        DisplayMode::List => {
+            let mut stdout = io::stdout();
+            if writeln!(stdout, "{}", target).is_err() {
+                exit(0);
+            }
+        }
+        _ => {
+            if let Some(ref mut cmd_sk) = cmd_sk {
+                if let Some(ref mut stdin) = cmd_sk.stdin {
+                    if writeln!(stdin, "{}", &target).is_err() {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    true
+}
+
+fn get_commits_from_blame(staged_files: &Vec<String>, range: &str) -> Result<Vec<String>> {
+    let mut diff_args = vec![
+        "--no-pager",
+        "diff",
+        "--color=never",
+        "--unified=1",
+        "--no-prefix",
+        "--cached",
+    ]
+    .into_iter()
+    .map(|e| e.to_string())
+    .collect::<Vec<_>>();
+    diff_args.push("--".to_string());
+    let mut staged_files = staged_files.clone();
+    diff_args.append(&mut staged_files);
+
+    let cmd_diff = Command::new("git")
+        .args(&diff_args)
+        .stdout(Stdio::piped())
+        .spawn()?;
+
+    let output = cmd_diff.wait_with_output()?;
+
+    let re_split = Regex::new(r"(?m)^diff ")?;
+    let re_file = Regex::new(r"(?m)^--- (.*)")?;
+    let re_chunk = Regex::new(r"(?m)^@@ -([0-9]*),([0-9]*) .*")?;
+
+    let diff = String::from_utf8_lossy(&output.stdout);
+
+    let mut commits: Vec<String> = Vec::new();
+
+    for split in re_split.split(&diff).skip(1) {
+        let file = re_file
+            .captures(&split)
+            .context("failed to match file in chunk")?;
+        let file = file.get(1).context("failed to get file group")?.as_str();
+        if file == "/dev/null" {
+            continue;
+        }
+
+        let mut blame_args = vec![
+            "--no-pager".to_string(),
+            "blame".to_string(),
+            "-s".to_string(),
+        ];
+
+        for chunks in re_chunk.captures_iter(&split) {
+            let offset = chunks
+                .get(1)
+                .context("failed to get offset group")?
+                .as_str();
+            let length = chunks
+                .get(2)
+                .context("failed to get length group")?
+                .as_str();
+            let location = format!("{},+{}", offset, length);
+            blame_args.push("-L".to_string());
+            blame_args.push(location);
+        }
+
+        blame_args.push(range.to_string());
+        blame_args.push("--".to_string());
+        blame_args.push(file.to_string());
+
+        let blame_output = Command::new("git")
+            .args(blame_args)
+            .stdout(Stdio::piped())
+            .output()?;
+
+        let blame_output = String::from_utf8_lossy(&blame_output.stdout);
+        let split_commits: Vec<_> = blame_output
+            .lines()
+            .filter_map(|e| e.clone().split_whitespace().next())
+            .collect();
+        for hash in split_commits {
+            if hash.starts_with("^") {
+                continue;
+            }
+            commits.push(hash.into());
+        }
+    }
+
+    Ok(commits)
+}
+
 fn spawn_file_revs(
     staged_files: &mut Vec<String>,
     format: &str,
@@ -149,6 +255,16 @@ fn spawn_file_revs(
         .args(&file_revs_args)
         .stdout(Stdio::piped())
         .spawn()?)
+}
+
+fn format_target(commit: &str, format: &str) -> Result<String> {
+    let format = format!("--format={}", format);
+    let args = vec!["--no-pager", "log", "-1", &format, commit];
+    let output = Command::new("git")
+        .stdout(Stdio::piped())
+        .args(&args)
+        .output()?;
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
 fn spawn_menu() -> Result<Child> {
