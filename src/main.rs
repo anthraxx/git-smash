@@ -14,12 +14,18 @@ mod git;
 use config::*;
 mod config;
 
-use structopt::StructOpt;
+use hash::*;
+mod hash;
 
+use std::collections::HashSet;
+use std::hash::BuildHasherDefault;
 use std::io::{BufRead, BufReader, Write};
 use std::process::{exit, Child, Command, Stdio};
 use std::{env, io, str};
 
+use structopt::StructOpt;
+
+use ahash::RandomState;
 use regex;
 use regex::Regex;
 
@@ -35,6 +41,9 @@ impl MenuCommand {
 }
 
 fn run(args: Args) -> Result<()> {
+    let hasher = RandomState::new();
+    let mut unique = HashSet::<u64, BuildHasherDefault<IdentityHasher>>::default();
+
     let config = Config::load(&args)?;
 
     let toplevel = git_toplevel()?.context("failed to get git toplevel path")?;
@@ -66,7 +75,16 @@ fn run(args: Args) -> Result<()> {
             false => Vec::new(),
         };
         for rev in commits_from_blame {
+            if !unique.insert(hash(&hasher, &rev)) {
+                continue;
+            }
+
             let target = format_target(&rev, &config.format)?;
+
+            if !unique.insert(hash(&hasher, &target)) {
+                continue;
+            }
+
             if !process_target(&target, &config.mode, &mut cmd_sk) {
                 break;
             }
@@ -87,6 +105,10 @@ fn run(args: Args) -> Result<()> {
         for rev in stdout_lines {
             // TODO: handle invalid utf8 without Lines
             let target = rev?;
+            if !unique.insert(hash(&hasher, &target)) {
+                continue;
+            }
+
             if !process_target(&target, &config.mode, &mut cmd_sk) {
                 break;
             }
