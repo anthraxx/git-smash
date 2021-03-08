@@ -60,35 +60,40 @@ fn run(args: Args) -> Result<()> {
         exit(1);
     }).unwrap();
 
-    let commits_from_blame = match config.blame {
-        true => get_commits_from_blame(&staged_files, &range)?,
-        false => Vec::new(),
-    };
-
-    let mut cmd_file_revs =
-        spawn_file_revs(&mut staged_files, &config.format, &range, config.max_count)?;
-
-    let stdout = cmd_file_revs
-        .stdout
-        .as_mut()
-        .context("failed to acquire stdout from git log command")?;
-    let stdout_reader = BufReader::new(stdout);
-    let stdout_lines = stdout_reader.lines();
-
-    for rev in commits_from_blame {
-        let target = format_target(&rev, &config.format)?;
-        if !process_target(&target, &config.mode, &mut cmd_sk) {
-            break;
-        }
-    }
-    for rev in stdout_lines {
-        let target = rev?;
-        if !process_target(&target, &config.mode, &mut cmd_sk) {
-            break;
+    if config.blame {
+        let commits_from_blame = match config.blame {
+            true => get_commits_from_blame(&staged_files, &range)?,
+            false => Vec::new(),
+        };
+        for rev in commits_from_blame {
+            let target = format_target(&rev, &config.format)?;
+            if !process_target(&target, &config.mode, &mut cmd_sk) {
+                break;
+            }
         }
     }
 
-    cmd_file_revs.kill()?;
+    if config.files {
+        let mut cmd_file_revs =
+            spawn_file_revs(&mut staged_files, &config.format, &range, config.max_count)?;
+
+        let stdout = cmd_file_revs
+            .stdout
+            .as_mut()
+            .context("failed to acquire stdout from git log command")?;
+        let stdout_reader = BufReader::new(stdout);
+        let stdout_lines = stdout_reader.lines();
+
+        for rev in stdout_lines {
+            // TODO: handle invalid utf8 without Lines
+            let target = rev?;
+            if !process_target(&target, &config.mode, &mut cmd_sk) {
+                break;
+            }
+        }
+
+        cmd_file_revs.kill()?;
+    }
 
     if let Some(cmd_sk) = cmd_sk {
         let output = cmd_sk.wait_with_output()?;

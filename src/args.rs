@@ -31,6 +31,18 @@ pub struct Args {
     /// Let the user edit the list of commits before rebasing
     #[structopt(long)]
     pub interactive: bool,
+    /// List commits acquired from blame chunks
+    #[structopt(long)]
+    pub blame: bool,
+    /// Do not list commits acquired from blame chunks
+    #[structopt(long)]
+    pub no_blame: bool,
+    /// List commits acquired from history of changed files
+    #[structopt(long)]
+    pub files: bool,
+    /// Do not list commits acquired from history of changed files
+    #[structopt(long)]
+    pub no_files: bool,
     /// Limit the listed commits to the given range
     #[structopt(long, group = "rev_range")]
     pub range: Option<String>,

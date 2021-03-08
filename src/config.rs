@@ -104,8 +104,32 @@ impl Config {
             } else {
                 false
             },
-            blame: true,
-            files: true,
+            blame: if args.blame {
+                true
+            } else if args.no_blame {
+                false
+            } else if let Some(blame) = GitConfigBuilder::new("smash.blame")
+                .with_type("bool")
+                .with_default("true")
+                .get_as_bool()?
+            {
+                blame
+            } else {
+                true
+            },
+            files: if args.files {
+                true
+            } else if args.no_files {
+                false
+            } else if let Some(files) = GitConfigBuilder::new("smash.files")
+                .with_type("bool")
+                .with_default("true")
+                .get_as_bool()?
+            {
+                files
+            } else {
+                true
+            },
         };
 
         Ok(config)
