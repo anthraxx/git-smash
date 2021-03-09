@@ -100,11 +100,19 @@ fn run(args: Args) -> Result<()> {
             .as_mut()
             .context("failed to acquire stdout from git log command")?;
         let stdout_reader = BufReader::new(stdout);
-        let stdout_lines = stdout_reader.lines();
+        let stdout_lines = stdout_reader.split(b'\n');
 
-        for rev in stdout_lines {
-            // TODO: handle invalid utf8 without Lines
-            let target = rev?;
+        for target in stdout_lines {
+            let target = target.context("failed to read bytes from stream")?;
+            let target = match target.ends_with(&[b'\r']) {
+                true => {
+                    let end = target.len() - 1;
+                    &target[..end]
+                }
+                false => &target[..],
+            };
+            let target = String::from_utf8_lossy(&target);
+
             if !unique.insert(hash(&hasher, &target)) {
                 continue;
             }
