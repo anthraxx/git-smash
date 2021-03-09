@@ -1,7 +1,4 @@
 #![deny(clippy::nursery, clippy::cargo)]
-extern crate strum;
-extern crate strum_macros;
-
 use args::*;
 mod args;
 
@@ -26,7 +23,6 @@ use std::{env, io, str};
 use structopt::StructOpt;
 
 use ahash::RandomState;
-use regex;
 use regex::Regex;
 
 struct MenuCommand {
@@ -111,7 +107,7 @@ fn run(args: Args) -> Result<()> {
                 }
                 false => &target[..],
             };
-            let target = String::from_utf8_lossy(&target);
+            let target = String::from_utf8_lossy(target);
 
             if !unique.insert(hash(&hasher, &target)) {
                 continue;
@@ -137,12 +133,9 @@ fn run(args: Args) -> Result<()> {
             bail!("Selected commit '{}' not found\nPossibly --format or smash.format doesn't return a hash", target);
         }
 
-        match config.mode {
-            DisplayMode::Select => {
-                writeln!(io::stdout(), "{}", &target).ok();
-                return Ok(());
-            }
-            _ => {}
+        if let DisplayMode::Select = config.mode {
+            writeln!(io::stdout(), "{}", &target).ok();
+            return Ok(());
         }
 
         git_commit_fixup(&target)?;
@@ -176,7 +169,7 @@ fn process_target(target: &str, mode: &DisplayMode, cmd_sk: &mut Option<Child>) 
     true
 }
 
-fn get_commits_from_blame(staged_files: &Vec<String>, range: &str) -> Result<Vec<String>> {
+fn get_commits_from_blame(staged_files: &[String], range: &str) -> Result<Vec<String>> {
     let mut diff_args = vec![
         "--no-pager",
         "diff",
@@ -189,7 +182,7 @@ fn get_commits_from_blame(staged_files: &Vec<String>, range: &str) -> Result<Vec
     .map(|e| e.to_string())
     .collect::<Vec<_>>();
     diff_args.push("--".to_string());
-    let mut staged_files = staged_files.clone();
+    let mut staged_files = staged_files.to_owned();
     diff_args.append(&mut staged_files);
 
     let cmd_diff = Command::new("git")
@@ -209,7 +202,7 @@ fn get_commits_from_blame(staged_files: &Vec<String>, range: &str) -> Result<Vec
 
     for split in re_split.split(&diff).skip(1) {
         let file = re_file
-            .captures(&split)
+            .captures(split)
             .context("failed to match file in chunk")?;
         let file = file.get(1).context("failed to get file group")?.as_str();
         if file == "/dev/null" {
@@ -222,7 +215,7 @@ fn get_commits_from_blame(staged_files: &Vec<String>, range: &str) -> Result<Vec
             "-s".to_string(),
         ];
 
-        for chunks in re_chunk.captures_iter(&split) {
+        for chunks in re_chunk.captures_iter(split) {
             let offset = chunks
                 .get(1)
                 .context("failed to get offset group")?
@@ -248,10 +241,10 @@ fn get_commits_from_blame(staged_files: &Vec<String>, range: &str) -> Result<Vec
         let blame_output = String::from_utf8_lossy(&blame_output.stdout);
         let split_commits: Vec<_> = blame_output
             .lines()
-            .filter_map(|e| e.clone().split_whitespace().next())
+            .filter_map(|e| e.split_whitespace().next())
             .collect();
         for hash in split_commits {
-            if hash.starts_with("^") {
+            if hash.starts_with('^') {
                 continue;
             }
             commits.push(hash.into());
@@ -281,7 +274,7 @@ fn spawn_file_revs(
     .map(|e| e.to_string())
     .collect::<Vec<_>>();
     if max_count > 0 {
-        file_revs_args.push(format!("-{}", max_count).to_string());
+        file_revs_args.push(format!("-{}", max_count));
     }
     file_revs_args.push("--".to_string());
     file_revs_args.append(staged_files);
@@ -314,7 +307,7 @@ fn spawn_menu() -> Result<Child> {
 fn select_target(line: &[u8]) -> Result<String> {
     let cow = String::from_utf8_lossy(line);
     Ok(cow
-        .splitn(2, " ")
+        .splitn(2, ' ')
         .next()
         .context("failed to split first part of the target")?
         .into())

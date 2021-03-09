@@ -11,7 +11,7 @@ pub struct GitConfigBuilder {
 }
 
 impl GitConfigBuilder {
-    pub fn new(key: &'static str) -> Self {
+    pub const fn new(key: &'static str) -> Self {
         Self {
             key,
             default: None,
@@ -19,12 +19,12 @@ impl GitConfigBuilder {
         }
     }
 
-    pub fn with_default(mut self, default: &'static str) -> Self {
+    pub const fn with_default(mut self, default: &'static str) -> Self {
         self.default = Some(default);
         self
     }
 
-    pub fn with_type(mut self, value_type: &'static str) -> Self {
+    pub const fn with_type(mut self, value_type: &'static str) -> Self {
         self.value_type = Some(value_type);
         self
     }
@@ -108,7 +108,7 @@ pub fn git_rebase(rev: &str, interactive: bool) -> Result<()> {
     let status = cmd.wait()?;
 
     if !status.success() {
-        exit(status.code().unwrap_or_else(|| 1));
+        exit(status.code().unwrap_or(1));
     }
 
     Ok(())
@@ -132,7 +132,7 @@ pub fn git_rev_root() -> Result<String> {
 pub fn git_rev_range(config: &Config) -> Result<Option<String>> {
     let head = "HEAD".to_string();
 
-    return match &config.range {
+    match &config.range {
         CommitRange::All => Ok(Some(head)),
         CommitRange::Local => {
             let upstream = git_rev_parse("@{upstream}")?;
@@ -146,7 +146,7 @@ pub fn git_rev_range(config: &Config) -> Result<Option<String>> {
             Ok(Some(head))
         }
         CommitRange::Range(range) => Ok(Some(range.into())),
-    };
+    }
 }
 
 pub fn git_rev_parse(rev: &str) -> Result<Option<String>> {
@@ -172,7 +172,7 @@ pub fn git_rev_parse_stderr<T: Into<Stdio>>(rev: &str, stderr: T) -> Result<Opti
 }
 
 pub fn git_toplevel() -> Result<Option<PathBuf>> {
-    Ok(git_rev_parse_stderr("--show-toplevel", Stdio::inherit())?.map(|e| PathBuf::from(e)))
+    Ok(git_rev_parse_stderr("--show-toplevel", Stdio::inherit())?.map(PathBuf::from))
 }
 
 pub fn is_valid_git_rev(rev: &str) -> Result<bool> {
@@ -189,19 +189,25 @@ pub fn git_commit_fixup(target: &str) -> Result<()> {
     let files_args = vec!["commit", "--no-edit", "--fixup", target];
     let output = Command::new("git").args(&files_args).output()?;
     if !output.status.success() {
-        exit(output.status.code().unwrap_or_else(|| 1));
+        exit(output.status.code().unwrap_or(1));
     }
     Ok(())
 }
 
 pub fn git_staged_files() -> Result<Vec<String>> {
-    let files_args = vec!["--no-pager", "diff", "--color=never", "--name-only", "--cached"];
+    let files_args = vec![
+        "--no-pager",
+        "diff",
+        "--color=never",
+        "--name-only",
+        "--cached",
+    ];
     let output = Command::new("git")
         .stdout(Stdio::piped())
         .args(&files_args)
         .output()?;
     if !output.status.success() {
-        exit(output.status.code().unwrap_or_else(|| 1));
+        exit(output.status.code().unwrap_or(1));
     }
     Ok(String::from_utf8_lossy(&output.stdout)
         .trim()
