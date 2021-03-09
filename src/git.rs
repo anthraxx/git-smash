@@ -195,7 +195,7 @@ pub fn git_commit_fixup(target: &str) -> Result<()> {
 }
 
 pub fn git_staged_files() -> Result<Vec<String>> {
-    let files_args = vec!["diff", "--color=never", "--name-only", "--cached"];
+    let files_args = vec!["--no-pager", "diff", "--color=never", "--name-only", "--cached"];
     let output = Command::new("git")
         .stdout(Stdio::piped())
         .args(&files_args)
