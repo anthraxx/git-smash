@@ -1,4 +1,8 @@
-use structopt::clap::AppSettings;
+use crate::errors::*;
+
+use std::io::stdout;
+
+use structopt::clap::{AppSettings, Shell};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -46,4 +50,24 @@ pub struct Args {
     /// Limit the listed commits to the given range
     #[structopt(long, group = "rev_range")]
     pub range: Option<String>,
+    #[structopt(subcommand)]
+    pub subcommand: Option<SubCommand>,
+}
+
+#[derive(Debug, StructOpt)]
+pub enum SubCommand {
+    /// Generate shell completions
+    #[structopt(name = "completions")]
+    Completions(Completions),
+}
+
+#[derive(Debug, StructOpt)]
+pub struct Completions {
+    #[structopt(possible_values=&Shell::variants())]
+    pub shell: Shell,
+}
+
+pub fn gen_completions(args: &Completions) -> Result<()> {
+    Args::clap().gen_completions_to("git-smash", args.shell, &mut stdout());
+    Ok(())
 }
