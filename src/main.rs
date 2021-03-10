@@ -38,7 +38,7 @@ impl MenuCommand {
 
 fn run(args: Args) -> Result<()> {
     if let Some(SubCommand::Completions(completions)) = args.subcommand {
-        return Ok(args::gen_completions(&completions)?);
+        return args::gen_completions(&completions);
     }
 
     let hasher = RandomState::new();
