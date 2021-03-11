@@ -1,3 +1,4 @@
+#![allow(clippy::use_self)]
 use crate::args::Args;
 use crate::errors::*;
 use crate::git::GitConfigBuilder;
