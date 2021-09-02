@@ -59,15 +59,16 @@ fn run(args: Args) -> Result<()> {
         exit(1);
     }
 
+    let range = git_rev_range(&config)?.ok_or_else(|| {
+        writeln!(io::stderr(), "No local commits found\nTry --all or set smash.range=all to list published commits").ok();
+        exit(1);
+    }).unwrap();
+
     let mut cmd_sk = match config.mode {
         DisplayMode::List => None,
         _ => Some(spawn_menu().context("failed to spawn menu command")?),
     };
 
-    let range = git_rev_range(&config)?.ok_or_else(|| {
-        writeln!(io::stderr(), "No local commits found\nTry --all or set smash.range=all to list published commits").ok();
-        exit(1);
-    }).unwrap();
 
     if config.blame {
         let commits_from_blame = match config.blame {
