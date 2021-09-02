@@ -115,7 +115,7 @@ pub fn git_rebase(rev: &str, interactive: bool) -> Result<()> {
 }
 
 pub fn git_rev_root() -> Result<String> {
-    let args = vec!["rev-list", "--max-parents=0", "HEAD"];
+    let args = vec!["rev-list", "--max-parents=0", "--no-abbrev-commit", "HEAD"];
     let output = Command::new("git")
         .stdout(Stdio::piped())
         .args(&args)

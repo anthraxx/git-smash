@@ -216,6 +216,7 @@ fn get_commits_from_blame(staged_files: &[String], range: &str) -> Result<Vec<St
         let mut blame_args = vec![
             "--no-pager".to_string(),
             "blame".to_string(),
+            "--no-abbrev".to_string(),
             "-s".to_string(),
         ];
 
