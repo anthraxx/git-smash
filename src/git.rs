@@ -61,7 +61,7 @@ impl GitConfigBuilder {
         ))
     }
 
-    pub fn get_as_bool(&mut self) -> Result<Option<bool>> {
+    pub fn get_as_bool(&self) -> Result<Option<bool>> {
         let value = self.get()?;
         match value {
             None => Ok(None),
@@ -73,7 +73,7 @@ impl GitConfigBuilder {
         }
     }
 
-    pub fn get_as_int(&mut self) -> Result<Option<u32>> {
+    pub fn get_as_int(&self) -> Result<Option<u32>> {
         let value = self.get()?;
         match value {
             None => Ok(None),
