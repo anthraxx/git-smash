@@ -82,10 +82,6 @@ fn run(args: Args) -> Result<()> {
 
             let target = format_target(&rev, &config.format)?;
 
-            if !unique.insert(hash(&hasher, &target)) {
-                continue;
-            }
-
             if !process_target(&target, &config.mode, &mut cmd_sk) {
                 break;
             }
@@ -113,8 +109,11 @@ fn run(args: Args) -> Result<()> {
                 false => &target[..],
             };
             let target = String::from_utf8_lossy(target);
+            let mut target = target.splitn(2, ' ');
+            let target_hash = target.next().context("failed to extract target hash")?;
+            let target = target.next().context("failed to extract target")?;
 
-            if !unique.insert(hash(&hasher, &target)) {
+            if !unique.insert(hash(&hasher, &target_hash)) {
                 continue;
             }
 
@@ -273,7 +272,7 @@ fn spawn_file_revs(
         "--extended-regexp",
         "--grep",
         "^(fixup|squash)! .*$",
-        format!("--format={}", format).as_str(),
+        format!("--format=%H {}", format).as_str(),
         range,
     ]
     .into_iter()
