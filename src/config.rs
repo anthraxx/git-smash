@@ -33,6 +33,7 @@ pub struct Config {
     pub interactive: bool,
     pub blame: bool,
     pub files: bool,
+    pub recent: bool,
 }
 
 impl Config {
@@ -130,6 +131,19 @@ impl Config {
                 files
             } else {
                 true
+            },
+            recent: if args.recent {
+                true
+            } else if args.no_recent {
+                false
+            } else if let Some(recent) = GitConfigBuilder::new("smash.recent")
+                .with_type("bool")
+                .with_default("false")
+                .get_as_bool()?
+            {
+                recent
+            } else {
+                false
             },
         };
 

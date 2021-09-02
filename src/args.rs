@@ -47,6 +47,12 @@ pub struct Args {
     /// Do not list commits acquired from history of changed files
     #[structopt(long)]
     pub no_files: bool,
+    /// List commits acquired from recent history
+    #[structopt(long)]
+    pub recent: bool,
+    /// Do not list commits acquired from recent history
+    #[structopt(long)]
+    pub no_recent: bool,
     /// Limit the listed commits to the given range
     #[structopt(long, group = "rev_range")]
     pub range: Option<String>,

@@ -69,6 +69,19 @@ fn run(args: Args) -> Result<()> {
         _ => Some(spawn_menu().context("failed to spawn menu command")?),
     };
 
+    if config.recent {
+        for rev in git_rev_list(&range, 5)? {
+            if !unique.insert(hash(&hasher, &rev)) {
+                continue;
+            }
+
+            let target = format_target(&rev, &config.format, "R")?;
+
+            if !process_target(&target, &config.mode, &mut cmd_sk) {
+                break;
+            }
+        }
+    }
 
     if config.blame {
         let commits_from_blame = match config.blame {

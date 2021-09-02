@@ -171,6 +171,24 @@ pub fn git_rev_parse_stderr<T: Into<Stdio>>(rev: &str, stderr: T) -> Result<Opti
     ))
 }
 
+pub fn git_rev_list(rev: &str, max_count: u32) -> Result<Vec<String>> {
+    let max_count = format!("{}", max_count);
+    let args = vec!["rev-list", "-n", &max_count, "--no-abbrev-commit", rev];
+    let output = Command::new("git")
+        .stdout(Stdio::piped())
+        .args(&args)
+        .output()?;
+    if !output.status.success() {
+        bail!("failed to get git rev_list for {}", rev);
+    }
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .into_owned()
+        .trim_end()
+        .to_owned().lines()
+        .map(|e| e.to_owned())
+        .collect())
+}
+
 pub fn git_toplevel() -> Result<Option<PathBuf>> {
     Ok(git_rev_parse_stderr("--show-toplevel", Stdio::inherit())?.map(PathBuf::from))
 }
