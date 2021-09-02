@@ -80,7 +80,7 @@ fn run(args: Args) -> Result<()> {
                 continue;
             }
 
-            let target = format_target(&rev, &config.format)?;
+            let target = format_target(&rev, &config.format, "B")?;
 
             if !process_target(&target, &config.mode, &mut cmd_sk) {
                 break;
@@ -272,7 +272,7 @@ fn spawn_file_revs(
         "--extended-regexp",
         "--grep",
         "^(fixup|squash)! .*$",
-        format!("--format=%H {}", format).as_str(),
+        format!("--format=%H {}", format.replace("%(smash:source)", "F")).as_str(),
         range,
     ]
     .into_iter()
@@ -290,8 +290,8 @@ fn spawn_file_revs(
         .spawn()?)
 }
 
-fn format_target(commit: &str, format: &str) -> Result<String> {
-    let format = format!("--format={}", format);
+fn format_target(commit: &str, format: &str, source: &str) -> Result<String> {
+    let format = format!("--format={}", format.replace("%(smash:source)", source));
     let args = vec!["--no-pager", "log", "-1", &format, commit];
     let output = Command::new("git")
         .stdout(Stdio::piped())

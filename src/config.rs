@@ -8,7 +8,7 @@ use std::str::FromStr;
 use strum_macros::{EnumString, ToString};
 
 pub const DEFAULT_LIST_FORMAT: &str =
-    "%C(yellow)%h%C(reset) %s %C(cyan)<%an>%C(reset) %C(green)(%cr)%C(reset)%C(auto)%d%C(reset)";
+    "%C(yellow)%h%C(reset) %C(red)[%(smash:source)]%C(reset) %s %C(cyan)<%an>%C(reset) %C(green)(%cr)%C(reset)%C(auto)%d%C(reset)";
 
 #[derive(Debug, PartialEq, ToString, EnumString)]
 #[strum(serialize_all = "snake_case")]
