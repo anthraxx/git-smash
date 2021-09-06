@@ -8,7 +8,10 @@ use std::str::FromStr;
 use strum_macros::{EnumString, ToString};
 
 pub const DEFAULT_LIST_FORMAT: &str =
-    "%C(yellow)%h%C(reset) %C(red)[%(smash:source)]%C(reset) %s %C(cyan)<%an>%C(reset) %C(green)(%cr)%C(reset)%C(auto)%d%C(reset)";
+    "%C(yellow)%h%C(reset) [%(smash:source)] %s %C(cyan)<%an>%C(reset) %C(green)(%cr)%C(reset)%C(auto)%d%C(reset)";
+pub const DEFAULT_FORMAT_SOURCE_FILES: &str = "%C(green)F%C(reset)";
+pub const DEFAULT_FORMAT_SOURCE_BLAME: &str = "%C(red)B%C(reset)";
+pub const DEFAULT_FORMAT_SOURCE_RECENT: &str = "%C(magenta)R%C(reset)️️";
 
 #[derive(Debug, PartialEq, ToString, EnumString)]
 #[strum(serialize_all = "snake_case")]
@@ -35,6 +38,9 @@ pub struct Config {
     pub files: bool,
     pub recent: bool,
     pub commit: Option<String>,
+    pub source_label_files: String,
+    pub source_label_blame: String,
+    pub source_label_recent: String,
 }
 
 impl Config {
@@ -146,6 +152,30 @@ impl Config {
                 recent
             } else {
                 false
+            },
+            source_label_files: if let Some(color) = GitConfigBuilder::new("smash.filesSourceFormat")
+                .with_default(DEFAULT_FORMAT_SOURCE_FILES)
+                .get()?
+            {
+                color
+            } else {
+                DEFAULT_FORMAT_SOURCE_FILES.into()
+            },
+            source_label_blame: if let Some(color) = GitConfigBuilder::new("smash.blameSourceFormat")
+                .with_default(DEFAULT_FORMAT_SOURCE_BLAME)
+                .get()?
+            {
+                color
+            } else {
+                DEFAULT_FORMAT_SOURCE_BLAME.into()
+            },
+            source_label_recent: if let Some(color) = GitConfigBuilder::new("smash.recentSourceFormat")
+                .with_default(DEFAULT_FORMAT_SOURCE_RECENT)
+                .get()?
+            {
+                color
+            } else {
+                DEFAULT_FORMAT_SOURCE_RECENT.into()
             },
             commit: args.commit.clone(),
         };

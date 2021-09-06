@@ -90,7 +90,7 @@ fn run(args: Args) -> Result<()> {
                 continue;
             }
 
-            let target = format_target(&rev, &config.format, "R")?;
+            let target = format_target(&rev, &config.format, &config.source_label_recent)?;
 
             if !process_target(&target, &config.mode, &mut cmd_sk) {
                 break;
@@ -108,7 +108,7 @@ fn run(args: Args) -> Result<()> {
                 continue;
             }
 
-            let target = format_target(&rev, &config.format, "B")?;
+            let target = format_target(&rev, &config.format, &config.source_label_blame)?;
 
             if !process_target(&target, &config.mode, &mut cmd_sk) {
                 break;
@@ -117,8 +117,13 @@ fn run(args: Args) -> Result<()> {
     }
 
     if config.files {
-        let mut cmd_file_revs =
-            spawn_file_revs(&mut staged_files, &config.format, &range, config.max_count)?;
+        let mut cmd_file_revs = spawn_file_revs(
+            &mut staged_files,
+            &config.format,
+            &range,
+            config.max_count,
+            &config.source_label_files,
+        )?;
 
         let stdout = cmd_file_revs
             .stdout
@@ -145,7 +150,7 @@ fn run(args: Args) -> Result<()> {
                 continue;
             }
 
-            if !process_target(&target, &config.mode, &mut cmd_sk) {
+            if !process_target(target, &config.mode, &mut cmd_sk) {
                 break;
             }
         }
@@ -292,7 +297,10 @@ fn spawn_file_revs(
     format: &str,
     range: &str,
     max_count: u32,
+    source_format: &str,
 ) -> Result<Child> {
+    let format = format
+        .replace("%(smash:source)", source_format);
     let mut file_revs_args = vec![
         "--no-pager",
         "log",
@@ -300,7 +308,7 @@ fn spawn_file_revs(
         "--extended-regexp",
         "--grep",
         "^(fixup|squash)! .*$",
-        format!("--format=%H {}", format.replace("%(smash:source)", "F")).as_str(),
+        format!("--format=%H {}", format).as_str(),
         range,
     ]
     .into_iter()
@@ -318,8 +326,10 @@ fn spawn_file_revs(
         .spawn()?)
 }
 
-fn format_target(commit: &str, format: &str, source: &str) -> Result<String> {
-    let format = format!("--format={}", format.replace("%(smash:source)", source));
+fn format_target(commit: &str, format: &str, source_format: &str) -> Result<String> {
+    let format = format
+        .replace("%(smash:source)", source_format);
+    let format = format!("--format={}", format);
     let args = vec!["--no-pager", "log", "-1", &format, commit];
     let output = Command::new("git")
         .stdout(Stdio::piped())
