@@ -34,9 +34,11 @@ pub struct Config {
     pub blame: bool,
     pub files: bool,
     pub recent: bool,
+    pub commit: Option<String>,
 }
 
 impl Config {
+    #[allow(clippy::cognitive_complexity)]
     pub fn load(args: &Args) -> Result<Self> {
         let config = Self {
             mode: if args.list {
@@ -145,6 +147,7 @@ impl Config {
             } else {
                 false
             },
+            commit: args.commit.clone(),
         };
 
         Ok(config)

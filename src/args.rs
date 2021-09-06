@@ -56,6 +56,9 @@ pub struct Args {
     /// Limit the listed commits to the given range
     #[structopt(long, group = "rev_range")]
     pub range: Option<String>,
+    /// Target commit to smash into
+    #[structopt()]
+    pub commit: Option<String>,
     #[structopt(subcommand)]
     pub subcommand: Option<SubCommand>,
 }

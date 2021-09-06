@@ -64,6 +64,21 @@ fn run(args: Args) -> Result<()> {
         exit(1);
     }).unwrap();
 
+    if let Some(target) = config.commit {
+        match git_rev_parse(&target).with_context(|| format!("failed to rev-parse '{}'", target))? {
+            None => bail!("Ambiguous argument '{}': unknown revision", target),
+            Some(target) => {
+                git_commit_fixup(&target)?;
+
+                if config.auto_rebase {
+                    git_rebase(&target, config.interactive)?;
+                }
+
+                return Ok(());
+            }
+        }
+    }
+
     let mut cmd_sk = match config.mode {
         DisplayMode::List => None,
         _ => Some(spawn_menu().context("failed to spawn menu command")?),

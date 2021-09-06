@@ -184,7 +184,8 @@ pub fn git_rev_list(rev: &str, max_count: u32) -> Result<Vec<String>> {
     Ok(String::from_utf8_lossy(&output.stdout)
         .into_owned()
         .trim_end()
-        .to_owned().lines()
+        .to_owned()
+        .lines()
         .map(|e| e.to_owned())
         .collect())
 }
