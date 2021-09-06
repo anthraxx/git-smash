@@ -36,22 +36,22 @@ pub struct Args {
     #[structopt(long)]
     pub interactive: bool,
     /// List commits acquired from blame chunks
-    #[structopt(long)]
+    #[structopt(long, group = "list_blame")]
     pub blame: bool,
     /// Do not list commits acquired from blame chunks
-    #[structopt(long)]
+    #[structopt(long, group = "list_blame")]
     pub no_blame: bool,
     /// List commits acquired from history of changed files
-    #[structopt(long)]
+    #[structopt(long, group = "list_files")]
     pub files: bool,
     /// Do not list commits acquired from history of changed files
-    #[structopt(long)]
+    #[structopt(long, group = "list_files")]
     pub no_files: bool,
     /// List commits acquired from recent history
-    #[structopt(long)]
+    #[structopt(long, group = "list_recent")]
     pub recent: bool,
     /// Do not list commits acquired from recent history
-    #[structopt(long)]
+    #[structopt(long, group = "list_recent")]
     pub no_recent: bool,
     /// Limit the listed commits to the given range
     #[structopt(long, group = "rev_range")]
