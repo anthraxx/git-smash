@@ -17,6 +17,7 @@ structopt = "^0.3"
 strum = "^0.21"
 strum_macros = "^0.21"
 ahash = "^0.7"
+semver = "^1.0"
 
 [profile.release]
 lto = true

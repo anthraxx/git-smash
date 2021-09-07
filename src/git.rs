@@ -1,6 +1,8 @@
 use crate::errors::*;
 
 use crate::config::{CommitRange, Config};
+use regex::Regex;
+use semver::Version;
 use std::path::PathBuf;
 use std::process::{exit, Command, Stdio};
 
@@ -233,4 +235,29 @@ pub fn git_staged_files() -> Result<Vec<String>> {
         .lines()
         .map(|e| e.to_owned())
         .collect())
+}
+
+pub fn git_version() -> Result<Version> {
+    let args = vec!["version"];
+    let output = Command::new("git")
+        .stdout(Stdio::piped())
+        .args(&args)
+        .output()?;
+    if !output.status.success() {
+        bail!("{}", String::from_utf8_lossy(&output.stderr).trim_end());
+    }
+    let git_version = String::from_utf8_lossy(&output.stdout).trim().to_owned();
+    let version_regex = Regex::new(r"[^ ]+ [^ ]+ (?P<version>[^ ]+)")
+        .context("failed to create git version regex")?;
+    let captures = version_regex
+        .captures(&git_version)
+        .with_context(|| format!("Failed to match git version from '{}'", git_version))?;
+    let version = captures
+        .name("version")
+        .context("failed to get version capture group")?
+        .as_str();
+    let version = Version::parse(version)
+        .with_context(|| format!("failed to parse version from '{}'", version))?;
+
+    Ok(version)
 }
