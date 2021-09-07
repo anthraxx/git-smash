@@ -56,6 +56,12 @@ pub struct Args {
     /// Limit the listed commits to the given range
     #[structopt(long, group = "rev_range")]
     pub range: Option<String>,
+    /// Smash staged changes and refine the log message
+    #[structopt(long, group = "fixup_mode")]
+    pub amend: bool,
+    /// Refine the log message ignoring all staged changes
+    #[structopt(long, group = "fixup_mode")]
+    pub reword: bool,
     /// Target commit to smash into
     #[structopt()]
     pub commit: Option<String>,

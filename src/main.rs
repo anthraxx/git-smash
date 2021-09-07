@@ -68,7 +68,7 @@ fn run(args: Args) -> Result<()> {
         match git_rev_parse(&target).with_context(|| format!("failed to rev-parse '{}'", target))? {
             None => bail!("Ambiguous argument '{}': unknown revision", target),
             Some(target) => {
-                git_commit_fixup(&target)?;
+                git_commit_fixup(&target, config.fixup_mode)?;
 
                 if config.auto_rebase {
                     git_rebase(&target, config.interactive)?;
@@ -175,7 +175,7 @@ fn run(args: Args) -> Result<()> {
             return Ok(());
         }
 
-        git_commit_fixup(&target)?;
+        git_commit_fixup(&target, config.fixup_mode)?;
 
         if config.auto_rebase {
             git_rebase(&target, config.interactive)?;

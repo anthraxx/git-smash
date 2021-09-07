@@ -1,6 +1,6 @@
 use crate::errors::*;
 
-use crate::config::{CommitRange, Config};
+use crate::config::{CommitRange, Config, FixupMode};
 use regex::Regex;
 use semver::Version;
 use std::path::PathBuf;
@@ -206,11 +206,19 @@ pub fn is_valid_git_rev(rev: &str) -> Result<bool> {
     Ok(cmd.wait()?.success())
 }
 
-pub fn git_commit_fixup(target: &str) -> Result<()> {
-    let files_args = vec!["commit", "--no-edit", "--fixup", target];
-    let output = Command::new("git").args(&files_args).output()?;
+pub fn git_commit_fixup(target: &str, mode: FixupMode) -> Result<()> {
+    let fixup = mode.to_cli_option(target);
+    let mut args = vec!["commit", "--verbose", &fixup];
+    if let FixupMode::Fixup = mode {
+        args.push("--no-edit")
+    };
+    let output = Command::new("git")
+        .args(&args)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .output()?;
     if !output.status.success() {
-        exit(output.status.code().unwrap_or(1));
+        bail!("{}", String::from_utf8_lossy(&output.stderr).trim_end());
     }
     Ok(())
 }

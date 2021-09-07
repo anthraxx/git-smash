@@ -1,10 +1,11 @@
 #![allow(clippy::use_self)]
 use crate::args::Args;
 use crate::errors::*;
-use crate::git::GitConfigBuilder;
+use crate::git::{git_version, GitConfigBuilder};
 
 use std::str::FromStr;
 
+use semver::VersionReq;
 use strum_macros::{EnumString, ToString};
 
 pub const DEFAULT_LIST_FORMAT: &str =
@@ -27,6 +28,22 @@ pub enum CommitRange {
     Range(String),
 }
 
+pub enum FixupMode {
+    Fixup,
+    Amend,
+    Reword,
+}
+
+impl FixupMode {
+    pub fn to_cli_option(&self, target: &str) -> String {
+        match self {
+            FixupMode::Fixup => format!("--fixup={}", target),
+            FixupMode::Amend => format!("--fixup=amend:{}", target),
+            FixupMode::Reword => format!("--fixup=reword:{}", target),
+        }
+    }
+}
+
 pub struct Config {
     pub mode: DisplayMode,
     pub range: CommitRange,
@@ -41,11 +58,14 @@ pub struct Config {
     pub source_label_files: String,
     pub source_label_blame: String,
     pub source_label_recent: String,
+    pub fixup_mode: FixupMode,
 }
 
 impl Config {
     #[allow(clippy::cognitive_complexity)]
     pub fn load(args: &Args) -> Result<Self> {
+        let git_version = git_version().context("failed to get git version")?;
+
         let config = Self {
             mode: if args.list {
                 DisplayMode::List
@@ -178,6 +198,19 @@ impl Config {
                 DEFAULT_FORMAT_SOURCE_RECENT.into()
             },
             commit: args.commit.clone(),
+            fixup_mode: if args.amend {
+                if !VersionReq::parse(">=2.33")?.matches(&git_version) {
+                    bail!("--amend requires a minimum git version of 2.33")
+                }
+                FixupMode::Amend
+            } else if args.reword {
+                if !VersionReq::parse(">=2.33")?.matches(&git_version) {
+                    bail!("--reword requires a minimum git version of 2.33")
+                }
+                FixupMode::Reword
+            } else {
+                FixupMode::Fixup
+            },
         };
 
         Ok(config)
