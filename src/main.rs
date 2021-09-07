@@ -46,7 +46,7 @@ fn run(args: Args) -> Result<()> {
 
     let config = Config::load(&args)?;
 
-    let toplevel = git_toplevel()?.context("failed to get git toplevel path")?;
+    let toplevel = git_toplevel().context("failed to get git toplevel path")?;
     env::set_current_dir(&toplevel)?;
 
     let mut staged_files = git_staged_files()?;
@@ -63,11 +63,15 @@ fn run(args: Args) -> Result<()> {
         writeln!(io::stderr(), "No local commits found\nTry --all or set smash.range=all to list published commits").ok();
         exit(1);
     }).unwrap();
+    // Make sure the range is a valid rev expression
+    if git_rev_parse(&range).is_err() {
+        bail!("Ambiguous argument '{}': unknown revision", range)
+    }
 
     if let Some(target) = config.commit {
-        match git_rev_parse(&target).with_context(|| format!("failed to rev-parse '{}'", target))? {
-            None => bail!("Ambiguous argument '{}': unknown revision", target),
-            Some(target) => {
+        match git_rev_parse(&target) {
+            Err(_) => bail!("Ambiguous argument '{}': unknown revision", target),
+            Ok(target) => {
                 git_commit_fixup(&target, config.fixup_mode)?;
 
                 if config.auto_rebase {
@@ -85,7 +89,9 @@ fn run(args: Args) -> Result<()> {
     };
 
     if config.recent {
-        for rev in git_rev_list(&range, 5)? {
+        for rev in git_rev_list(&range, 1)
+            .with_context(|| format!("failed to get rev-list for {}", range))?
+        {
             if !unique.insert(hash(&hasher, &rev)) {
                 continue;
             }
@@ -134,14 +140,8 @@ fn run(args: Args) -> Result<()> {
 
         for target in stdout_lines {
             let target = target.context("failed to read bytes from stream")?;
-            let target = match target.ends_with(&[b'\r']) {
-                true => {
-                    let end = target.len() - 1;
-                    &target[..end]
-                }
-                false => &target[..],
-            };
-            let target = String::from_utf8_lossy(target);
+            let target = String::from_utf8_lossy(&target);
+            let target = target.trim_end();
             let mut target = target.splitn(2, ' ');
             let target_hash = target.next().context("failed to extract target hash")?;
             let target = target.next().context("failed to extract target")?;

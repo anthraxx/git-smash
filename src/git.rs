@@ -4,7 +4,7 @@ use crate::config::{CommitRange, Config, FixupMode};
 use regex::Regex;
 use semver::Version;
 use std::path::PathBuf;
-use std::process::{exit, Command, Stdio};
+use std::process::{Command, Stdio};
 
 pub struct GitConfigBuilder {
     key: &'static str,
@@ -53,7 +53,7 @@ impl GitConfigBuilder {
                 Some(1) => {
                     return Ok(None);
                 }
-                _ => bail!("{}", String::from_utf8_lossy(output.stderr.as_ref()).trim()),
+                _ => bail!("{}", String::from_utf8_lossy(&output.stderr).trim()),
             }
         }
         Ok(Some(
@@ -89,7 +89,7 @@ impl GitConfigBuilder {
 }
 
 pub fn git_rebase(rev: &str, interactive: bool) -> Result<()> {
-    let root = git_rev_root()?;
+    let root = git_rev_root().context("failed to get git rev root")?;
     let rev = match root.starts_with(rev) {
         true => "--root".to_string(),
         false => format!("{}^", rev),
@@ -106,11 +106,11 @@ pub fn git_rebase(rev: &str, interactive: bool) -> Result<()> {
     if !interactive {
         cmd.env("GIT_EDITOR", "true");
     }
-    let mut cmd = cmd.args(&args).spawn()?;
-    let status = cmd.wait()?;
+    let cmd = cmd.args(&args).spawn()?;
+    let output = cmd.wait_with_output()?;
 
-    if !status.success() {
-        exit(status.code().unwrap_or(1));
+    if !output.status.success() {
+        bail!("{}", String::from_utf8_lossy(&output.stderr).trim_end());
     }
 
     Ok(())
@@ -123,7 +123,7 @@ pub fn git_rev_root() -> Result<String> {
         .args(&args)
         .output()?;
     if !output.status.success() {
-        bail!("failed to get git rev root");
+        bail!("{}", String::from_utf8_lossy(&output.stderr).trim_end());
     }
     Ok(String::from_utf8_lossy(&output.stdout)
         .into_owned()
@@ -137,9 +137,9 @@ pub fn git_rev_range(config: &Config) -> Result<Option<String>> {
     match &config.range {
         CommitRange::All => Ok(Some(head)),
         CommitRange::Local => {
-            let upstream = git_rev_parse("@{upstream}")?;
-            if let Some(upstream) = upstream {
-                let head = git_rev_parse("HEAD")?.context("failed to rev parse HEAD")?;
+            let upstream = git_rev_parse("@{upstream}");
+            if let Ok(upstream) = upstream {
+                let head = git_rev_parse("HEAD").context("failed to rev parse HEAD")?;
                 if upstream == head {
                     return Ok(None);
                 }
@@ -151,26 +151,20 @@ pub fn git_rev_range(config: &Config) -> Result<Option<String>> {
     }
 }
 
-pub fn git_rev_parse(rev: &str) -> Result<Option<String>> {
-    git_rev_parse_stderr(rev, Stdio::piped())
-}
-
-pub fn git_rev_parse_stderr<T: Into<Stdio>>(rev: &str, stderr: T) -> Result<Option<String>> {
+pub fn git_rev_parse(rev: &str) -> Result<String> {
     let args = vec!["rev-parse", rev];
     let output = Command::new("git")
         .stdout(Stdio::piped())
-        .stderr(stderr)
+        .stderr(Stdio::piped())
         .args(&args)
         .output()?;
     if !output.status.success() {
-        return Ok(None);
+        bail!("{}", String::from_utf8_lossy(&output.stderr).trim_end());
     }
-    Ok(Some(
-        String::from_utf8_lossy(&output.stdout)
-            .into_owned()
-            .trim_end()
-            .to_owned(),
-    ))
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .into_owned()
+        .trim_end()
+        .to_owned())
 }
 
 pub fn git_rev_list(rev: &str, max_count: u32) -> Result<Vec<String>> {
@@ -181,7 +175,7 @@ pub fn git_rev_list(rev: &str, max_count: u32) -> Result<Vec<String>> {
         .args(&args)
         .output()?;
     if !output.status.success() {
-        bail!("failed to get git rev_list for {}", rev);
+        bail!("{}", String::from_utf8_lossy(&output.stderr).trim_end());
     }
     Ok(String::from_utf8_lossy(&output.stdout)
         .into_owned()
@@ -192,8 +186,8 @@ pub fn git_rev_list(rev: &str, max_count: u32) -> Result<Vec<String>> {
         .collect())
 }
 
-pub fn git_toplevel() -> Result<Option<PathBuf>> {
-    Ok(git_rev_parse_stderr("--show-toplevel", Stdio::inherit())?.map(PathBuf::from))
+pub fn git_toplevel() -> Result<PathBuf> {
+    git_rev_parse("--show-toplevel").map(PathBuf::from)
 }
 
 pub fn is_valid_git_rev(rev: &str) -> Result<bool> {
@@ -236,7 +230,7 @@ pub fn git_staged_files() -> Result<Vec<String>> {
         .args(&files_args)
         .output()?;
     if !output.status.success() {
-        exit(output.status.code().unwrap_or(1));
+        bail!("{}", String::from_utf8_lossy(&output.stderr).trim_end());
     }
     Ok(String::from_utf8_lossy(&output.stdout)
         .trim()
