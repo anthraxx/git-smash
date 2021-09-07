@@ -2,7 +2,7 @@ use crate::errors::*;
 
 use crate::config::{CommitRange, Config, FixupMode};
 use regex::Regex;
-use semver::Version;
+use semver::{Version, VersionReq};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
@@ -262,4 +262,19 @@ pub fn git_version() -> Result<Version> {
         .with_context(|| format!("failed to parse version from '{}'", version))?;
 
     Ok(version)
+}
+
+pub fn git_check_version(git_version: &Version, check: &str, feature: &str) -> Result<()> {
+    if !VersionReq::parse(check)
+        .with_context(|| format!("failed to parse version {}", check))?
+        .matches(git_version)
+    {
+        bail!(
+            "git version {} does not match {} required for {}",
+            git_version,
+            check,
+            feature
+        )
+    }
+    Ok(())
 }

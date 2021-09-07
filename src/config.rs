@@ -1,11 +1,10 @@
 #![allow(clippy::use_self)]
 use crate::args::Args;
 use crate::errors::*;
-use crate::git::{git_version, GitConfigBuilder};
+use crate::git::{git_check_version, git_version, GitConfigBuilder};
 
 use std::str::FromStr;
 
-use semver::VersionReq;
 use strum_macros::{EnumString, ToString};
 
 pub const DEFAULT_LIST_FORMAT: &str =
@@ -202,14 +201,10 @@ impl Config {
             },
             commit: args.commit.clone(),
             fixup_mode: if args.amend {
-                if !VersionReq::parse(">=2.33")?.matches(&git_version) {
-                    bail!("--amend requires a minimum git version of 2.33")
-                }
+                git_check_version(&git_version, ">=2.33", "--amend")?;
                 FixupMode::Amend
             } else if args.reword {
-                if !VersionReq::parse(">=2.33")?.matches(&git_version) {
-                    bail!("--reword requires a minimum git version of 2.33")
-                }
+                git_check_version(&git_version, ">=2.33", "--reword")?;
                 FixupMode::Reword
             } else {
                 FixupMode::Fixup
