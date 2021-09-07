@@ -299,8 +299,7 @@ fn spawn_file_revs(
     max_count: u32,
     source_format: &str,
 ) -> Result<Child> {
-    let format = format
-        .replace("%(smash:source)", source_format);
+    let format = format.replace("%(smash:source)", source_format);
     let mut file_revs_args = vec![
         "--no-pager",
         "log",
@@ -327,8 +326,7 @@ fn spawn_file_revs(
 }
 
 fn format_target(commit: &str, format: &str, source_format: &str) -> Result<String> {
-    let format = format
-        .replace("%(smash:source)", source_format);
+    let format = format.replace("%(smash:source)", source_format);
     let format = format!("--format={}", format);
     let args = vec!["--no-pager", "log", "-1", &format, commit];
     let output = Command::new("git")

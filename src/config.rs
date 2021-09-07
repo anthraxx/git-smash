@@ -173,25 +173,28 @@ impl Config {
             } else {
                 false
             },
-            source_label_files: if let Some(color) = GitConfigBuilder::new("smash.filesSourceFormat")
-                .with_default(DEFAULT_FORMAT_SOURCE_FILES)
-                .get()?
+            source_label_files: if let Some(color) =
+                GitConfigBuilder::new("smash.filesSourceFormat")
+                    .with_default(DEFAULT_FORMAT_SOURCE_FILES)
+                    .get()?
             {
                 color
             } else {
                 DEFAULT_FORMAT_SOURCE_FILES.into()
             },
-            source_label_blame: if let Some(color) = GitConfigBuilder::new("smash.blameSourceFormat")
-                .with_default(DEFAULT_FORMAT_SOURCE_BLAME)
-                .get()?
+            source_label_blame: if let Some(color) =
+                GitConfigBuilder::new("smash.blameSourceFormat")
+                    .with_default(DEFAULT_FORMAT_SOURCE_BLAME)
+                    .get()?
             {
                 color
             } else {
                 DEFAULT_FORMAT_SOURCE_BLAME.into()
             },
-            source_label_recent: if let Some(color) = GitConfigBuilder::new("smash.recentSourceFormat")
-                .with_default(DEFAULT_FORMAT_SOURCE_RECENT)
-                .get()?
+            source_label_recent: if let Some(color) =
+                GitConfigBuilder::new("smash.recentSourceFormat")
+                    .with_default(DEFAULT_FORMAT_SOURCE_RECENT)
+                    .get()?
             {
                 color
             } else {
