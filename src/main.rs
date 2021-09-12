@@ -345,6 +345,8 @@ fn spawn_menu() -> Result<Child> {
         .spawn()?)
 }
 
+// TODO: remove once stabilized
+#[allow(unknown_lints, clippy::manual_split_once)]
 fn select_target(line: &[u8]) -> Result<String> {
     let cow = String::from_utf8_lossy(line);
     Ok(cow
