@@ -170,7 +170,7 @@ fn run(args: Args) -> Result<()> {
             bail!("Selected commit '{}' not found\nPossibly --format or smash.format doesn't return a hash", target);
         }
 
-        if let DisplayMode::Select = config.mode {
+        if config.mode == DisplayMode::Select {
             writeln!(io::stdout(), "{}", &target).ok();
             return Ok(());
         }
