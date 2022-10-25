@@ -33,7 +33,7 @@ pub struct Args {
     #[structopt(long, group = "autorebase")]
     pub no_rebase: bool,
     /// Let the user edit the list of commits before rebasing
-    #[structopt(long)]
+    #[structopt(long, short = "i")]
     pub interactive: bool,
     /// List commits acquired from blame chunks
     #[structopt(long, group = "list_blame")]
