@@ -51,7 +51,7 @@ pub struct Args {
     #[structopt(long)]
     pub recent: Option<u32>,
     /// Limit the listed commits to the given range
-    #[structopt(long, group = "rev_range")]
+    #[structopt(long, group = "rev_range", name = "revision-range")]
     pub range: Option<String>,
     /// Smash staged changes and refine the log message
     #[structopt(long, group = "fixup_mode")]
