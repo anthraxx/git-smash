@@ -12,11 +12,11 @@ keywords = ["git", "workflow"]
 
 [dependencies]
 anyhow = "^1.0"
-regex = "^1.4"
+regex = "^1.6"
 structopt = "^0.3"
-strum = "^0.21"
-strum_macros = "^0.21"
-ahash = "^0.7"
+strum = "^0.24"
+strum_macros = "^0.24"
+ahash = "^0.8"
 semver = "^1.0"
 
 [profile.release]
