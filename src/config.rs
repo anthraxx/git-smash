@@ -5,7 +5,7 @@ use crate::git::{git_check_version, git_version, GitConfigBuilder};
 
 use std::str::FromStr;
 
-use strum_macros::{EnumString, ToString};
+use strum_macros::{Display, EnumString};
 
 pub const DEFAULT_LIST_FORMAT: &str =
     "%C(yellow)%h%C(reset) [%(smash:source)] %s %C(cyan)<%an>%C(reset) %C(green)(%cr)%C(reset)%C(auto)%d%C(reset)";
@@ -13,7 +13,7 @@ pub const DEFAULT_FORMAT_SOURCE_FILES: &str = "%C(green)F%C(reset)";
 pub const DEFAULT_FORMAT_SOURCE_BLAME: &str = "%C(red)B%C(reset)";
 pub const DEFAULT_FORMAT_SOURCE_RECENT: &str = "%C(magenta)R%C(reset)️️";
 
-#[derive(Debug, PartialEq, ToString, EnumString)]
+#[derive(Debug, PartialEq, Eq, Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum DisplayMode {
     Smash,

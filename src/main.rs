@@ -350,7 +350,7 @@ fn spawn_menu() -> Result<Child> {
 fn select_target(line: &[u8]) -> Result<String> {
     let cow = String::from_utf8_lossy(line);
     Ok(cow
-        .splitn(2, ' ')
+        .split(' ')
         .next()
         .context("failed to split first part of the target")?
         .into())
