@@ -105,6 +105,7 @@ pub fn git_rebase(rev: &str, interactive: bool) -> Result<()> {
     let mut cmd = Command::new("git");
     if !interactive {
         cmd.env("GIT_EDITOR", "true");
+        cmd.env("GIT_SEQUENCE_EDITOR", "true");
     }
     let cmd = cmd.args(&args).spawn()?;
     let output = cmd.wait_with_output()?;
