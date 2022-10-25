@@ -89,7 +89,7 @@ dependencies = [
 
 [[package]]
 name = "git-smash"
-version = "0.0.2"
+version = "0.1.0"
 dependencies = [
  "ahash",
  "anyhow",
