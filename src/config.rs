@@ -52,7 +52,7 @@ pub struct Config {
     pub interactive: bool,
     pub blame: bool,
     pub files: bool,
-    pub recent: bool,
+    pub recent: u32,
     pub commit: Option<String>,
     pub source_label_files: String,
     pub source_label_blame: String,
@@ -149,16 +149,14 @@ impl Config {
                     .get_as_bool()?
                     .unwrap_or(true)
             },
-            recent: if args.recent {
-                true
-            } else if args.no_recent {
-                false
+            recent: if let Some(recent) = args.recent {
+                recent
             } else {
                 GitConfigBuilder::new("smash.recent")
-                    .with_type("bool")
-                    .with_default("false")
-                    .get_as_bool()?
-                    .unwrap_or(false)
+                    .with_type("int")
+                    .with_default("0")
+                    .get_as_int()?
+                    .unwrap_or(0)
             },
             source_label_files: GitConfigBuilder::new("smash.filesSourceFormat")
                 .with_default(DEFAULT_FORMAT_SOURCE_FILES)

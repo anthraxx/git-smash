@@ -47,12 +47,9 @@ pub struct Args {
     /// Do not list commits acquired from history of changed files
     #[structopt(long, group = "list_files")]
     pub no_files: bool,
-    /// List commits acquired from recent history
-    #[structopt(long, group = "list_recent")]
-    pub recent: bool,
-    /// Do not list commits acquired from recent history
-    #[structopt(long, group = "list_recent")]
-    pub no_recent: bool,
+    /// List commits acquired from recent history (default 0)
+    #[structopt(long)]
+    pub recent: Option<u32>,
     /// Limit the listed commits to the given range
     #[structopt(long, group = "rev_range")]
     pub range: Option<String>,

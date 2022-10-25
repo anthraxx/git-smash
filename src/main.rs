@@ -88,8 +88,8 @@ fn run(args: Args) -> Result<()> {
         _ => Some(spawn_menu().context("failed to spawn menu command")?),
     };
 
-    if config.recent {
-        for rev in git_rev_list(&range, 1)
+    if config.recent > 0 {
+        for rev in git_rev_list(&range, config.recent)
             .with_context(|| format!("failed to get rev-list for {}", range))?
         {
             if !unique.insert(hash(&hasher, &rev)) {
