@@ -214,6 +214,7 @@ fn get_commits_from_blame(staged_files: &[String], range: &str) -> Result<Vec<St
         "--unified=1",
         "--no-prefix",
         "--cached",
+        "--no-ext-diff",
     ]
     .into_iter()
     .map(|e| e.to_string())

@@ -225,6 +225,7 @@ pub fn git_staged_files() -> Result<Vec<String>> {
         "--color=never",
         "--name-only",
         "--cached",
+        "--no-ext-diff",
     ];
     let output = Command::new("git")
         .stdout(Stdio::piped())
