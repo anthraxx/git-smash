@@ -231,8 +231,8 @@ fn get_commits_from_blame(staged_files: &[String], range: &str) -> Result<Vec<St
     let output = cmd_diff.wait_with_output()?;
 
     let re_split = Regex::new(r"(?m)^diff ")?;
-    let re_file = Regex::new(r"(?m)^--- (.*)")?;
-    let re_chunk = Regex::new(r"(?m)^@@ -([0-9]*),([0-9]*) .*")?;
+    let re_file = Regex::new(r"(?m)^--- (.+)")?;
+    let re_chunk = Regex::new(r"(?m)^@@ -([0-9]+)(,([0-9]+))? ([^ ]+) @@")?;
 
     let diff = String::from_utf8_lossy(&output.stdout);
 
@@ -260,9 +260,11 @@ fn get_commits_from_blame(staged_files: &[String], range: &str) -> Result<Vec<St
                 .context("failed to get offset group")?
                 .as_str();
             let length = chunks
-                .get(2)
-                .context("failed to get length group")?
-                .as_str();
+                .get(3)
+                .map(|m| m.as_str())
+                .context("failed to get length group")
+                .unwrap_or("1");
+
             let location = format!("{},+{}", offset, length);
             blame_args.push("-L".to_string());
             blame_args.push(location);
