@@ -13,7 +13,8 @@ keywords = ["git", "workflow"]
 [dependencies]
 anyhow = "^1.0"
 regex = "^1.6"
-structopt = "^0.3"
+clap = { version = "^4.0", features = ["derive"] }
+clap_complete = "^4.0"
 strum = "^0.24"
 strum_macros = "^0.24"
 ahash = "^0.8"

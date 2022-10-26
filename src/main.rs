@@ -20,9 +20,8 @@ use std::io::{BufRead, BufReader, Write};
 use std::process::{exit, Child, Command, Stdio};
 use std::{env, io, str};
 
-use structopt::StructOpt;
-
 use ahash::RandomState;
+use clap::Parser;
 use regex::Regex;
 
 struct MenuCommand {
@@ -38,7 +37,8 @@ impl MenuCommand {
 
 fn run(args: Args) -> Result<()> {
     if let Some(SubCommand::Completions(completions)) = args.subcommand {
-        return args::gen_completions(&completions);
+        args::gen_completions(&completions);
+        return Ok(());
     }
 
     let hasher = RandomState::new();
@@ -384,7 +384,7 @@ fn resolve_menu_command() -> Result<MenuCommand> {
 }
 
 fn main() {
-    let args = Args::from_args();
+    let args = Args::parse();
 
     if let Err(err) = run(args) {
         eprintln!("Error: {}", err);
