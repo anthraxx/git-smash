@@ -306,6 +306,7 @@ fn spawn_file_revs(
     let mut file_revs_args = vec![
         "--no-pager",
         "log",
+        "--color",
         "--invert-grep",
         "--extended-regexp",
         "--grep",
@@ -331,7 +332,7 @@ fn spawn_file_revs(
 fn format_target(commit: &str, format: &str, source_format: &str) -> Result<String> {
     let format = format.replace("%(smash:source)", source_format);
     let format = format!("--format={}", format);
-    let args = vec!["--no-pager", "log", "-1", &format, commit];
+    let args = vec!["--no-pager", "log", "--color", "-1", &format, commit];
     let output = Command::new("git")
         .stdout(Stdio::piped())
         .args(&args)
