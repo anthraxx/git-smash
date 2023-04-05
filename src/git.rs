@@ -204,7 +204,7 @@ pub fn is_valid_git_rev(rev: &str) -> Result<bool> {
 pub fn git_commit_fixup(target: &str, mode: FixupMode) -> Result<()> {
     let fixup = mode.to_cli_option(target);
     let mut args = vec!["commit", "--verbose", &fixup];
-    if let FixupMode::Fixup = mode {
+    if matches!(mode, FixupMode::Fixup) {
         args.push("--no-edit")
     };
     let output = Command::new("git")
