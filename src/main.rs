@@ -47,7 +47,7 @@ fn run(args: Args) -> Result<()> {
     let config = Config::load(&args)?;
 
     let toplevel = git_toplevel().context("failed to get git toplevel path")?;
-    env::set_current_dir(&toplevel)?;
+    env::set_current_dir(toplevel)?;
 
     let mut staged_files = git_staged_files()?;
     if staged_files.is_empty() {

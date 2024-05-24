@@ -20,7 +20,5 @@ impl Hasher for IdentityHasher {
 }
 
 pub fn hash<T: BuildHasher, U: std::hash::Hash + ?Sized>(build: &T, v: &U) -> u64 {
-    let mut s = build.build_hasher();
-    v.hash(&mut s);
-    s.finish()
+    build.hash_one(v)
 }
