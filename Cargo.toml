@@ -1,6 +1,6 @@
 [package]
 name = "git-smash"
-version = "0.1.0"
+version = "0.1.1"
 description = "Smash staged changes into previous commits"
 authors = ["anthraxx <levente@leventepolyak.net>"]
 edition = "2021"
