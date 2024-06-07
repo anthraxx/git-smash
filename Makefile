@@ -82,6 +82,6 @@ release: all
 			--title "v$$TAG" \
 			--notes-file <(git cliff --strip=all --latest) \
 			"v$$TAG" \
-			git-smash-v$$TAG.$(TARBALLFORMAT) \
-			git-smash-v$$TAG.$(TARBALLFORMAT).sig && \
+			$(TARBALLDIR)/git-smash-v$$TAG.$(TARBALLFORMAT) \
+			$(TARBALLDIR)/git-smash-v$$TAG.$(TARBALLFORMAT).sig && \
 		cargo publish
