@@ -66,10 +66,22 @@ uninstall:
 
 release: all
 	$(INSTALL) -d $(TARBALLDIR)
+	gh auth status
+	git cliff --strip=all --unreleased
 	@read -p 'version> ' TAG && \
-		$(SED) "s|version = .*|version = \"$$TAG\"|" -i Cargo.toml && \
+		$(SED) "s|^version = .*|version = \"$$TAG\"|" -i Cargo.toml && \
 		$(CARGO) build --release && \
-		$(GIT) commit --gpg-sign --message "version: release $$TAG" Cargo.toml Cargo.lock && \
-		$(GIT) tag --sign --message "version: release $$TAG" $$TAG && \
-		$(GIT) archive -o $(TARBALLDIR)/git-smash-$$TAG.$(TARBALLFORMAT) --format $(TARBALLFORMAT) --prefix=git-smash-$$TAG/ $$TAG && \
-		$(GPG) --detach-sign $(TARBALLDIR)/git-smash-$$TAG.$(TARBALLFORMAT)
+		git cliff --tag "v$$TAG" > CHANGELOG.md && \
+		$(GIT) commit --gpg-sign --message "chore(release): version v$$TAG" Cargo.toml Cargo.lock CHANGELOG.md && \
+		$(GIT) tag --sign --message "Version v$$TAG" v$$TAG && \
+		$(GIT) archive -o $(TARBALLDIR)/git-smash-v$$TAG.$(TARBALLFORMAT) --format $(TARBALLFORMAT) --prefix=git-smash-$$TAG/ v$$TAG && \
+		$(GPG) --detach-sign $(TARBALLDIR)/git-smash-v$$TAG.$(TARBALLFORMAT) && \
+		git push origin main && \
+		git push origin v$$TAG && \
+		gh release create \
+			--title "v$$TAG" \
+			--notes-file <(git cliff --strip=all --latest) \
+			"v$$TAG" \
+			git-smash-v$$TAG.$(TARBALLFORMAT) \
+			git-smash-v$$TAG.$(TARBALLFORMAT).sig && \
+		cargo publish
