@@ -138,12 +138,14 @@ pub fn git_rev_range(config: &Config) -> Result<Option<String>> {
     match &config.range {
         CommitRange::All => Ok(Some(head)),
         CommitRange::Local => {
+            #[allow(clippy::literal_string_with_formatting_args)]
             let upstream = git_rev_parse("@{upstream}");
             if let Ok(upstream) = upstream {
                 let head = git_rev_parse("HEAD").context("failed to rev parse HEAD")?;
                 if upstream == head {
                     return Ok(None);
                 }
+                #[allow(clippy::literal_string_with_formatting_args)]
                 return Ok(Some("@{upstream}..HEAD".to_string()));
             }
             Ok(Some(head))

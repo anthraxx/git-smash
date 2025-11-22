@@ -30,7 +30,7 @@ struct MenuCommand {
 }
 
 impl MenuCommand {
-    fn new(command: String, args: Vec<String>) -> Self {
+    const fn new(command: String, args: Vec<String>) -> Self {
         Self { command, args }
     }
 }
