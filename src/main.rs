@@ -379,12 +379,12 @@ fn resolve_menu_command() -> Result<MenuCommand> {
         "--preview".to_string(),
         "git show --stat --patch --color {1}".to_string(),
     ];
-    for cmd in &[("sk", &fuzzy_args), ("fzf", &fuzzy_args)] {
+    for cmd in &[("fzf", &fuzzy_args)] {
         if let Some(bin) = resolve_command(cmd.0)? {
             return Ok(MenuCommand::new(bin, cmd.1.to_owned()));
         }
     }
-    bail!("Can't find any supported fuzzy matcher or menu command\nPlease install skim, fzf or configure one with smash.menu");
+    bail!("Can't find any supported fuzzy matcher or menu command\nPlease install fzf or configure one with smash.menu");
 }
 
 fn main() {
