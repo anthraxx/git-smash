@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.2] - 2026-02-06
+
+### Bug Fixes
+
+- fuzzy: Drop skim for now, new version is buggy and hangs
+- fuzzy: Use preview index compatible with fzf and skim
+
+### Miscellaneous Tasks
+
+- clippy: Fix warnings and nursery suggestions
+- doc: Update badge in README.md
+- deps: Upgrade all dependencies
+- make: Use tarball export directory for github release artifacts
+
 ## [0.1.1] - 2024-06-07
 
 ### Bug Fixes
