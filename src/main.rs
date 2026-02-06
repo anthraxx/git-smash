@@ -377,7 +377,7 @@ fn resolve_menu_command() -> Result<MenuCommand> {
     let fuzzy_args = vec![
         "--ansi".to_string(),
         "--preview".to_string(),
-        "git show --stat --patch --color {+1}".to_string(),
+        "git show --stat --patch --color {1}".to_string(),
     ];
     for cmd in &[("sk", &fuzzy_args), ("fzf", &fuzzy_args)] {
         if let Some(bin) = resolve_command(cmd.0)? {
