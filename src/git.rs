@@ -247,17 +247,23 @@ pub fn git_staged_files() -> Result<Vec<String>> {
 pub fn git_version() -> Result<Version> {
     let args = vec!["version"];
     let output = Command::new("git")
+        .args(args)
         .stdout(Stdio::piped())
-        .args(&args)
+        .stderr(Stdio::piped())
         .output()?;
     if !output.status.success() {
         bail!("{}", String::from_utf8_lossy(&output.stderr).trim_end());
     }
-    let git_version = String::from_utf8_lossy(&output.stdout).trim().to_owned();
-    let version_regex = Regex::new(r"[^ ]+ [^ ]+ (?P<version>[^ ]+)")
-        .context("failed to create git version regex")?;
+    let version = String::from_utf8_lossy(&output.stdout).trim().to_owned();
+    parse_git_version(&version)
+}
+
+fn parse_git_version(git_version: &str) -> Result<Version> {
+    let version_regex =
+        Regex::new(r"[^ ]+ [^ ]+ (?P<version>[^ ]+?)(?P<rc>\.rc[0-9]+)?(?P<dirty>\.dirty)?$")
+            .context("failed to create git version regex")?;
     let captures = version_regex
-        .captures(&git_version)
+        .captures(git_version)
         .with_context(|| format!("Failed to match git version from '{}'", git_version))?;
     let version = captures
         .name("version")
@@ -282,4 +288,45 @@ pub fn git_check_version(git_version: &Version, check: &str, feature: &str) -> R
         )
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_git_version() -> Result<()> {
+        let version = parse_git_version("git version 2.53.1")?;
+        assert_eq!(version, Version::parse("2.53.1")?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_git_version_dirty() -> Result<()> {
+        let version = parse_git_version("git version 2.53.0.dirty")?;
+        assert_eq!(version, Version::parse("2.53.0")?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_git_version_rc() -> Result<()> {
+        let version = parse_git_version("git version 2.53.0.rc2")?;
+        assert_eq!(version, Version::parse("2.53.0")?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_git_version_rc_dirty() -> Result<()> {
+        let version = parse_git_version("git version 2.53.0.rc2.dirty")?;
+        assert_eq!(version, Version::parse("2.53.0")?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_git_version_invalid_message() {
+        let err = parse_git_version("123.456.789.000").unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("Failed to match git version from '123.456.789.000'"));
+    }
 }
