@@ -88,20 +88,18 @@ impl GitConfigBuilder {
     }
 }
 
-pub fn git_rebase(rev: &str, interactive: bool) -> Result<()> {
+pub fn git_rebase(rev: &str, interactive: bool, gpg_sign: &Option<String>) -> Result<()> {
     let root = git_rev_root().context("failed to get git rev root")?;
     let rev = match root.starts_with(rev) {
         true => "--root".to_string(),
         false => format!("{}^", rev),
     };
 
-    let args = vec![
-        "rebase",
-        "--interactive",
-        "--autosquash",
-        "--autostash",
-        &rev,
-    ];
+    let mut args = vec!["rebase", "--interactive", "--autosquash", "--autostash"];
+    if let Some(gpg_sign) = gpg_sign {
+        args.push(gpg_sign);
+    }
+    args.push(&rev);
     let mut cmd = Command::new("git");
     if !interactive {
         cmd.env("GIT_EDITOR", "true");
@@ -203,12 +201,15 @@ pub fn is_valid_git_rev(rev: &str) -> Result<bool> {
     Ok(cmd.wait()?.success())
 }
 
-pub fn git_commit_fixup(target: &str, mode: FixupMode) -> Result<()> {
+pub fn git_commit_fixup(target: &str, mode: FixupMode, gpg_sign: &Option<String>) -> Result<()> {
     let fixup = mode.to_cli_option(target);
     let mut args = vec!["commit", "--verbose", &fixup];
     if matches!(mode, FixupMode::Fixup) {
         args.push("--no-edit")
     };
+    if let Some(gpg_sign) = gpg_sign {
+        args.push(gpg_sign);
+    }
     let output = Command::new("git")
         .args(&args)
         .stdin(Stdio::inherit())

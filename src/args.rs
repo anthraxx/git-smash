@@ -59,8 +59,17 @@ pub struct Args {
     /// Refine the log message ignoring all staged changes
     #[arg(long, group = "fixup_mode")]
     pub reword: bool,
+
+    /// GPG-sign commits, the keyid defaults to the committer identity
+    #[arg(long, short = 'S', group = "sign", num_args = 0..=1, default_missing_value = "")]
+    pub gpg_sign: Option<String>,
+    /// Useful to countermand commit.gpgSign configuration
+    #[arg(long, group = "sign")]
+    pub no_gpg_sign: bool,
+
     /// Target commit to smash into
     pub commit: Option<String>,
+
     #[command(subcommand)]
     pub subcommand: Option<SubCommand>,
 }

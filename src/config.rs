@@ -58,6 +58,7 @@ pub struct Config {
     pub source_label_blame: String,
     pub source_label_recent: String,
     pub fixup_mode: FixupMode,
+    pub gpg_sign_option: Option<String>,
 }
 
 impl Config {
@@ -180,6 +181,19 @@ impl Config {
             } else {
                 FixupMode::Fixup
             },
+            gpg_sign_option: args.gpg_sign.as_ref().map_or_else(
+                || {
+                    if args.no_gpg_sign {
+                        Some("--no-gpg-sign".into())
+                    } else {
+                        None
+                    }
+                },
+                |gpg_sign| match gpg_sign.is_empty() {
+                    true => Some("--gpg-sign".into()),
+                    false => Some(format!("--gpg-sign={}", gpg_sign)),
+                },
+            ),
         };
 
         Ok(config)
