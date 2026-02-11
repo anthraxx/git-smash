@@ -376,6 +376,8 @@ fn resolve_command(command: &str) -> Result<Option<String>> {
 fn resolve_menu_command() -> Result<MenuCommand> {
     let fuzzy_args = vec![
         "--ansi".to_string(),
+        "--bind".to_string(),
+        "ctrl-f:preview-page-down,ctrl-b:preview-page-up".to_string(),
         "--preview".to_string(),
         "git show --stat --patch --color {1}".to_string(),
     ];
