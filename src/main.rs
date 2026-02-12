@@ -366,6 +366,7 @@ fn spawn_menu() -> Result<Child> {
         .args(menu.args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
+        .env("DFT_COLOR", "always")
         .spawn()?)
 }
 
