@@ -37,7 +37,7 @@ test:
 	$(CARGO) test $(CARGO_OPTIONS)
 
 lint:
-	$(CARGO) fmt -- --check
+	$(CARGO) fmt --all -- --check
 	$(CARGO) check
 	$(CARGO) clippy --all -- -D warnings
 	$(CARGO) deny check
