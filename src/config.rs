@@ -60,6 +60,7 @@ pub struct Config {
     pub fixup_mode: FixupMode,
     pub gpg_sign_option: Option<String>,
     pub verify_option: Option<String>,
+    pub pager: Option<String>,
     pub ext_diff: Option<String>,
 }
 
@@ -202,6 +203,11 @@ impl Config {
                 Some("--no-verify".into())
             } else {
                 None
+            },
+            pager: if args.no_pager {
+                None
+            } else {
+                GitConfigBuilder::new("core.pager").get()?
             },
             ext_diff: if args.ext_diff {
                 Some("--ext-diff".into())

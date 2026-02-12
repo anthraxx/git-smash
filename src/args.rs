@@ -81,6 +81,10 @@ pub struct Args {
     #[arg(long, group = "extdiff")]
     pub no_ext_diff: bool,
 
+    /// Do not pipe Git output into a pager
+    #[arg(long, group = "git_pager")]
+    pub no_pager: bool,
+
     /// Target commit to smash into
     pub commit: Option<String>,
 

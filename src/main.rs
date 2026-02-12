@@ -395,6 +395,16 @@ fn resolve_command(command: &str) -> Result<Option<String>> {
 }
 
 fn resolve_menu_command(config: &Config) -> Result<MenuCommand> {
+    let pipe = config.pager.as_ref().map_or_else(
+        || "".to_string(),
+        |pager| {
+            if pager == "delta" {
+                "| delta".to_string()
+            } else {
+                "".to_string()
+            }
+        },
+    );
     let ext_diff = config.ext_diff.clone().unwrap_or_default();
     let show_args = [ext_diff].join(" ");
 
@@ -403,7 +413,7 @@ fn resolve_menu_command(config: &Config) -> Result<MenuCommand> {
         "--bind".to_string(),
         "ctrl-f:preview-page-down,ctrl-b:preview-page-up".to_string(),
         "--preview".to_string(),
-        format!("git show --stat --patch --color {show_args} {{1}}"),
+        format!("git show --stat --patch --color {show_args} {{1}}{pipe}"),
     ];
     for cmd in &[("fzf", &fuzzy_args)] {
         if let Some(bin) = resolve_command(cmd.0)? {
