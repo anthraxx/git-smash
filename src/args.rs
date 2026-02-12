@@ -74,6 +74,13 @@ pub struct Args {
     #[arg(long, group = "verify_hook")]
     pub no_verify: bool,
 
+    /// Allow an external diff helper to be executed
+    #[arg(long, group = "extdiff")]
+    pub ext_diff: bool,
+    /// Disallow external diff drivers
+    #[arg(long, group = "extdiff")]
+    pub no_ext_diff: bool,
+
     /// Target commit to smash into
     pub commit: Option<String>,
 

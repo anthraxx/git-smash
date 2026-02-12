@@ -95,7 +95,7 @@ fn run(args: Args) -> Result<()> {
 
     let mut cmd_sk = match config.mode {
         DisplayMode::List => None,
-        _ => Some(spawn_menu().context("failed to spawn menu command")?),
+        _ => Some(spawn_menu(&config).context("failed to spawn menu command")?),
     };
 
     if config.recent > 0 {
@@ -360,8 +360,8 @@ fn format_target(commit: &str, format: &str, source_format: &str) -> Result<Stri
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
-fn spawn_menu() -> Result<Child> {
-    let menu = resolve_menu_command()?;
+fn spawn_menu(config: &Config) -> Result<Child> {
+    let menu = resolve_menu_command(config)?;
     Ok(Command::new(menu.command)
         .args(menu.args)
         .stdin(Stdio::piped())
@@ -394,13 +394,16 @@ fn resolve_command(command: &str) -> Result<Option<String>> {
     ))
 }
 
-fn resolve_menu_command() -> Result<MenuCommand> {
+fn resolve_menu_command(config: &Config) -> Result<MenuCommand> {
+    let ext_diff = config.ext_diff.clone().unwrap_or_default();
+    let show_args = [ext_diff].join(" ");
+
     let fuzzy_args = vec![
         "--ansi".to_string(),
         "--bind".to_string(),
         "ctrl-f:preview-page-down,ctrl-b:preview-page-up".to_string(),
         "--preview".to_string(),
-        "git show --stat --patch --color {1}".to_string(),
+        format!("git show --stat --patch --color {show_args} {{1}}"),
     ];
     for cmd in &[("fzf", &fuzzy_args)] {
         if let Some(bin) = resolve_command(cmd.0)? {

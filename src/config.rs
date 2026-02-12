@@ -60,6 +60,7 @@ pub struct Config {
     pub fixup_mode: FixupMode,
     pub gpg_sign_option: Option<String>,
     pub verify_option: Option<String>,
+    pub ext_diff: Option<String>,
 }
 
 impl Config {
@@ -199,6 +200,13 @@ impl Config {
                 Some("--verify".into())
             } else if args.no_verify {
                 Some("--no-verify".into())
+            } else {
+                None
+            },
+            ext_diff: if args.ext_diff {
+                Some("--ext-diff".into())
+            } else if args.no_ext_diff {
+                Some("--no-ext-diff".into())
             } else {
                 None
             },
