@@ -72,10 +72,20 @@ fn run(args: Args) -> Result<()> {
         match git_rev_parse(&target) {
             Err(_) => bail!("Ambiguous argument '{}': unknown revision", target),
             Ok(target) => {
-                git_commit_fixup(&target, config.fixup_mode, &config.gpg_sign_option)?;
+                git_commit_fixup(
+                    &target,
+                    config.fixup_mode,
+                    &config.gpg_sign_option,
+                    &config.verify_option,
+                )?;
 
                 if config.auto_rebase {
-                    git_rebase(&target, config.interactive, &config.gpg_sign_option)?;
+                    git_rebase(
+                        &target,
+                        config.interactive,
+                        &config.gpg_sign_option,
+                        &config.verify_option,
+                    )?;
                 }
 
                 return Ok(());
@@ -175,10 +185,20 @@ fn run(args: Args) -> Result<()> {
             return Ok(());
         }
 
-        git_commit_fixup(&target, config.fixup_mode, &config.gpg_sign_option)?;
+        git_commit_fixup(
+            &target,
+            config.fixup_mode,
+            &config.gpg_sign_option,
+            &config.verify_option,
+        )?;
 
         if config.auto_rebase {
-            git_rebase(&target, config.interactive, &config.gpg_sign_option)?;
+            git_rebase(
+                &target,
+                config.interactive,
+                &config.gpg_sign_option,
+                &config.verify_option,
+            )?;
         }
     }
 

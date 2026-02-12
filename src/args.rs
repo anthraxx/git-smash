@@ -67,6 +67,13 @@ pub struct Args {
     #[arg(long, group = "sign")]
     pub no_gpg_sign: bool,
 
+    /// Allows the pre-rebase, pre-commit and commit-msg hook to run
+    #[arg(long, group = "verify_hook")]
+    pub verify: bool,
+    /// This option bypasses the pre-rebase, pre-commit and commit-msg hooks
+    #[arg(long, group = "verify_hook")]
+    pub no_verify: bool,
+
     /// Target commit to smash into
     pub commit: Option<String>,
 

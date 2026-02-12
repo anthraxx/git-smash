@@ -59,6 +59,7 @@ pub struct Config {
     pub source_label_recent: String,
     pub fixup_mode: FixupMode,
     pub gpg_sign_option: Option<String>,
+    pub verify_option: Option<String>,
 }
 
 impl Config {
@@ -194,6 +195,13 @@ impl Config {
                     false => Some(format!("--gpg-sign={}", gpg_sign)),
                 },
             ),
+            verify_option: if args.verify {
+                Some("--verify".into())
+            } else if args.no_verify {
+                Some("--no-verify".into())
+            } else {
+                None
+            },
         };
 
         Ok(config)
