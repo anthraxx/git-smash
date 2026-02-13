@@ -1,11 +1,12 @@
 use std::io::stdout;
 
+use clap::builder::styling;
 use clap::CommandFactory;
 use clap::{Args as ClapArgs, Parser, Subcommand};
 use clap_complete::{generate, Shell};
 
 #[derive(Debug, Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about, long_about = None, styles=help_style())]
 #[command(propagate_version = true)]
 pub struct Args {
     /// List mode to print all potential targets to stdout
@@ -108,4 +109,15 @@ pub fn gen_completions(completions: &Completions) {
     let mut cmd = Args::command();
     let bin_name = cmd.get_name().to_string();
     generate(completions.shell, &mut cmd, &bin_name, &mut stdout());
+}
+
+fn help_style() -> styling::Styles {
+    styling::Styles::styled()
+        .usage(styling::AnsiColor::Green.on_default() | styling::Effects::BOLD)
+        .header(styling::AnsiColor::Green.on_default() | styling::Effects::BOLD)
+        .literal(styling::AnsiColor::BrightCyan.on_default() | styling::Effects::BOLD)
+        .invalid(styling::AnsiColor::Yellow.on_default() | styling::Effects::BOLD)
+        .error(styling::AnsiColor::Red.on_default() | styling::Effects::BOLD)
+        .valid(styling::AnsiColor::Cyan.on_default() | styling::Effects::BOLD)
+        .placeholder(styling::AnsiColor::Cyan.on_default())
 }
