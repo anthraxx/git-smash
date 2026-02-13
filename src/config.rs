@@ -1,4 +1,3 @@
-#![allow(clippy::use_self)]
 use crate::args::Args;
 use crate::errors::*;
 use crate::git::{git_check_version, git_version, GitConfigBuilder};
@@ -36,9 +35,9 @@ pub enum FixupMode {
 impl FixupMode {
     pub fn to_cli_option(&self, target: &str) -> String {
         match self {
-            FixupMode::Fixup => format!("--fixup={}", target),
-            FixupMode::Amend => format!("--fixup=amend:{}", target),
-            FixupMode::Reword => format!("--fixup=reword:{}", target),
+            Self::Fixup => format!("--fixup={}", target),
+            Self::Amend => format!("--fixup=amend:{}", target),
+            Self::Reword => format!("--fixup=reword:{}", target),
         }
     }
 }
