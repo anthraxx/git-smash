@@ -71,7 +71,7 @@ pub struct Args {
     /// Allows the pre-rebase, pre-commit and commit-msg hook to run
     #[arg(long, group = "verify_hook")]
     pub verify: bool,
-    /// This option bypasses the pre-rebase, pre-commit and commit-msg hooks
+    /// Bypasses the pre-rebase, pre-commit and commit-msg hooks
     #[arg(long, group = "verify_hook")]
     pub no_verify: bool,
 
