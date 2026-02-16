@@ -410,6 +410,7 @@ fn resolve_menu_command(config: &Config) -> Result<MenuCommand> {
         "--ansi".to_string(),
         "--bind".to_string(),
         "ctrl-f:preview-page-down,ctrl-b:preview-page-up".to_string(),
+        format!("--preview-window={}", &config.preview_window),
         "--preview".to_string(),
         format!("git show --stat --patch --color {show_args} {{1}}{pipe}"),
     ];

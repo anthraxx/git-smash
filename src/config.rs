@@ -61,6 +61,7 @@ pub struct Config {
     pub verify_option: Option<String>,
     pub pager: Option<String>,
     pub ext_diff: Option<String>,
+    pub preview_window: String,
 }
 
 impl Config {
@@ -214,6 +215,14 @@ impl Config {
                 Some("--no-ext-diff".into())
             } else {
                 None
+            },
+            preview_window: if let Some(preview_window) = &args.preview_window {
+                preview_window.to_string()
+            } else {
+                GitConfigBuilder::new("smash.previewWindow")
+                    .with_default("right")
+                    .get()?
+                    .unwrap()
             },
         };
 

@@ -86,6 +86,10 @@ pub struct Args {
     #[arg(long, group = "git_pager")]
     pub no_pager: bool,
 
+    /// Determines the layout of the fzf preview window
+    #[arg(long, value_name = "layout")]
+    pub preview_window: Option<String>,
+
     /// Target commit to smash into
     pub commit: Option<String>,
 
